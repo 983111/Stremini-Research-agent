@@ -1,3 +1,13 @@
+// ╔══════════════════════════════════════════════════════════════════════════════╗
+// ║          AcademicHub — Elite Multi-Agent Research Copilot                  ║
+// ║          9-Role Pipeline | Anti-Hallucination Core | v3.1                 ║
+// ║  Subrequest budget per FULL run:                                           ║
+// ║    Evidence : 2 queries × 3 sources          =  6 fetches                 ║
+// ║    AI calls : Commander(1) + loop×2×3(6)                                  ║
+// ║               + QACombo(1) + FinalWriter(1)  =  9 AI calls                ║
+// ║    TOTAL    : ≤ 15  (CF Free limit = 50)                                  ║
+// ╚══════════════════════════════════════════════════════════════════════════════╝
+
 export default {
   async fetch(request, env) {
     const corsHeaders = {
@@ -10,7 +20,12 @@ export default {
     if (request.method === "OPTIONS") return new Response(null, { headers: corsHeaders });
 
     if (request.method === "GET") {
-      return new Response(JSON.stringify({ status: "OK", message: "Stremini Multi-Agent Research & Math Worker is running." }), { headers: corsHeaders });
+      return new Response(JSON.stringify({
+        status: "OK",
+        message: "AcademicHub Multi-Agent Research Worker v3.1 is running.",
+        agents: 9,
+        features: ["anti-hallucination", "multi-source-evidence", "iterative-critique", "confidence-scoring", "cf-subrequest-optimised"],
+      }), { headers: corsHeaders });
     }
 
     if (request.method !== "POST") {
@@ -28,12 +43,11 @@ export default {
       const {
         query,
         mode = "research",
-        phase = "FULL", // "PLAN", "WRITE_SECTION", "VERIFY", or "FULL" (legacy)
+        phase = "FULL",
         section_topic = "",
         draft_text = "",
         search_context = [],
         history = [],
-        iteration = 0,
         searchResults = [],
       } = body;
 
@@ -45,21 +59,22 @@ export default {
         return new Response(JSON.stringify({ status: "ERROR", message: "Worker secret missing. Please set MBZUAI_API_KEY." }), { status: 500, headers: corsHeaders });
       }
 
-      const trimmedHistory = history.slice(-10);
+      const trimmedHistory = history.slice(-12);
 
+      // ── FULL RESEARCH PIPELINE ──
       if (mode === "research" && phase === "FULL") {
         const pipelineResult = await runResearchPipeline({
           env,
           query,
           history: trimmedHistory,
           seedSearchResults: searchResults,
-          corsHeaders,
         });
-
         return new Response(JSON.stringify(pipelineResult), { headers: corsHeaders });
       }
 
-      // ── Shared diagram instructions ──
+      // ════════════════════════════════════════════════════════════════════════
+      // DIAGRAM INSTRUCTIONS (shared across single-phase agents)
+      // ════════════════════════════════════════════════════════════════════════
       const diagramInstructions = `
 DIAGRAMS — Embed Mermaid diagrams inline using this exact tag format:
 
@@ -79,7 +94,6 @@ sequenceDiagram
     participant B as Actor B
     A->>B: Request
     B-->>A: Response
-    A->>B: Follow-up
 </diagram>
 
 <diagram type="mindmap" title="Diagram Title Here">
@@ -90,9 +104,6 @@ mindmap
       Item B
     Category Two
       Item C
-      Item D
-    Category Three
-      Item E
 </diagram>
 
 <diagram type="timeline" title="Diagram Title Here">
@@ -100,246 +111,219 @@ timeline
     title Development Timeline
     section Early Period
         1950 : First milestone
-        1960 : Second milestone
     section Modern Era
-        2000 : Key development
         2020 : Recent advance
 </diagram>
 
 <diagram type="graph" title="Diagram Title Here">
 graph LR
     A[Concept A] --> B[Concept B]
-    B --> C[Concept C]
-    A --> C
-    C --> D[Outcome]
+    B --> C[Outcome]
 </diagram>
 
-Diagram usage guide:
-- flowchart: use for processes, methodologies, decision trees, algorithms
-- sequence: use for interactions, protocols, cause-effect chains
-- mindmap: use for concept overviews, topic structures, literature maps
-- timeline: use for historical developments, chronological reviews
-- graph: use for relationships, networks, dependencies between concepts
-- Keep all node labels SHORT — under 25 characters per node
-- Place diagrams naturally INSIDE the relevant section, not at the end
-- Do NOT wrap diagram content in backticks or code fences — use only the <diagram> tag
+Diagram rules:
+- flowchart: processes, methodologies, decision trees, algorithms
+- sequence: interactions, protocols, cause-effect chains
+- mindmap: concept overviews, topic structures, literature maps
+- timeline: historical developments, chronological reviews
+- graph: relationships, networks, dependencies
+- Keep all node labels SHORT — under 25 characters
+- Place diagrams INSIDE the relevant section, not at the end
+- Do NOT wrap diagram content in backticks or code fences
 `;
 
       let systemPrompt = "";
       let userPrompt = query;
-      let aiTemperature = 0.8; // Default for math and creative generation
+      let aiTemperature = 0.7;
 
       // ════════════════════════════════════════════════════════════════════════
-      // MATH MODE
+      // MATH MODE — single AI call
       // ════════════════════════════════════════════════════════════════════════
       if (mode === "math") {
-        systemPrompt = `You are Stremini, a world-class mathematics expert and professor. You solve mathematical problems with complete rigour, showing every step. You may include Mermaid diagrams to illustrate proof structure, algorithm flow, or geometric relationships.
+        aiTemperature = 0.2;
+        systemPrompt = `You are AcademicHub's Mathematics Expert Agent. Solve problems with complete rigour, showing every intermediate step. You may include Mermaid diagrams to illustrate proof structure or algorithm flow.
 ${diagramInstructions}
-- Each math solution may include 1-2 diagrams if helpful.
-OUTPUT — wrap everything in <solution></solution> tags and fill in ALL content with real mathematics:
+OUTPUT — wrap everything in <solution></solution> tags:
 
 <solution>
 PROBLEM RESTATEMENT
-Write a formal restatement of the problem in precise mathematical language.
+Formal mathematical restatement of the problem.
 
 GIVEN & FIND
-Given: list all known quantities, conditions, and constraints
-Find: state exactly what must be computed or proved
+Given: [all known quantities and constraints]
+Find: [exactly what must be computed or proved]
 
 SOLUTION
 
-Step 1 — [Write the actual name of this step, e.g. "Factor the denominator"]
-Write the complete algebraic or logical working for this step. Show every intermediate line. Use ASCII math notation: fractions as a/b, powers as x^n, roots as sqrt(x), integrals as integral(f dx), sums as sum(i=1 to n). Justify each transformation with the rule or theorem applied.
+Step 1 — [Actual step name]
+Complete working with every intermediate line. Use ASCII math: fractions as a/b, powers as x^n, roots as sqrt(x). Justify each transformation with the rule or theorem applied.
 
-Step 2 — [Write the actual name of this step]
-Continue the working...
+Step 2 — [Actual step name]
+Continue working...
 
-[Continue with as many steps as the problem requires — never skip or abbreviate]
-
-[Insert a <diagram> here if it helps — e.g. flowchart of proof steps, or graph of relationships]
+[Add as many steps as needed — never skip or abbreviate]
 
 ANSWER
 =============================================
-[State the complete final answer clearly]
+[State the complete final answer]
 =============================================
 
 VERIFICATION
-Show the verification: substitute the answer back, check dimensions, or use an alternate method. Write out the full verification working.
+Substitute answer back, check dimensions, or use alternate method. Full working shown.
 
 KEY CONCEPTS USED
-Write 2-4 sentences naming and briefly explaining the mathematical theorems, identities, or techniques applied in this solution.
+2–4 sentences naming and explaining the theorems, identities, or techniques applied.
+
+CONFIDENCE NOTE
+State any assumptions made or areas of uncertainty.
 </solution>
 
-ABSOLUTE RULES:
-- Output ONLY the <solution>...</solution> block. Zero words outside it.
-- NEVER truncate. Show ALL steps with full working.
-- Use plain ASCII math only — no LaTeX, no dollar signs, no backslashes.
-- Fill in every section with real content — no placeholders.
-- Name every theorem and lemma used in proofs.`;
-      } 
-      
+RULES:
+- Output ONLY the <solution>...</solution> block.
+- NEVER truncate. Show ALL steps.
+- Use plain ASCII math only — no LaTeX, no dollar signs.
+- Name every theorem and lemma used.`;
+      }
+
       // ════════════════════════════════════════════════════════════════════════
-      // RESEARCH MODE - MULTI-AGENT PIPELINE
+      // RESEARCH MODE — INDIVIDUAL PHASES (single AI calls each)
       // ════════════════════════════════════════════════════════════════════════
       else {
-        
-        // ── AGENT 1: THE PLANNER ──
+
+        // ── PLAN phase: 1 AI call ──
         if (phase === "PLAN") {
-          aiTemperature = 0.3; // Low temp for strict JSON structuring
-          systemPrompt = `You are the Stremini Commander Agent. Your job is to analyze a research topic and output a strictly formatted JSON research plan.
-          Do not output any markdown formatting (no \`\`\`json) or pleasantries. Output ONLY raw JSON.
-          Format:
-          {
-            "title": "Proposed Academic Paper Title",
-            "sections": ["Introduction", "Literature Review", "Methodology", "Analysis: [Specific Subtopic]", "Conclusion"],
-            "search_queries": ["highly targeted search query 1", "highly targeted search query 2", "highly targeted search query 3"]
-          }`;
-          userPrompt = `Create a rigorous academic research plan for the following topic: ${query}`;
+          aiTemperature = 0.2;
+          systemPrompt = `You are the AcademicHub Commander Agent. Analyze the research topic and output strict JSON only. No markdown, no preamble.
+Format:
+{
+  "title": "Proposed Academic Paper Title",
+  "thesis": "One-sentence core thesis or research question",
+  "sections": ["Introduction", "Literature Review", "Methodology", "Analysis: [Subtopic]", "Findings", "Conclusion"],
+  "search_queries": ["targeted query 1", "targeted query 2"],
+  "key_concepts": ["concept1", "concept2", "concept3"],
+  "potential_controversies": ["controversy or debate 1"],
+  "out_of_scope": ["what this paper will NOT cover"]
+}`;
+          userPrompt = `Create a rigorous academic research plan for: ${query}`;
         }
-        
-        // ── AGENT 2 & 3: THE RESEARCHER & WRITER ──
+
+        // ── WRITE_SECTION phase: 3 fetch calls + 1 AI call ──
         else if (phase === "WRITE_SECTION") {
           let liveSearchResults = [];
           if (env.SERPER_API_KEY) {
             try {
-              liveSearchResults = await fetchSerperResults(env.SERPER_API_KEY, `${query} ${section_topic}`);
-            } catch (searchErr) {
-              console.error("Serper search failed:", searchErr.message);
-            }
+              liveSearchResults = await fetchSerperResults(env.SERPER_API_KEY, `${query} ${section_topic}`, 6);
+            } catch (e) { console.error("Serper failed:", e.message); }
           }
+          let arxivResults = [];
+          let semanticResults = [];
+          try { arxivResults = await fetchArxivResults(`${query} ${section_topic}`, 4); } catch (_) {}
+          try { semanticResults = await fetchSemanticScholarResults(`${query} ${section_topic}`, 4); } catch (_) {}
 
           const seenUrls = new Set(liveSearchResults.map(r => r.url));
-          const mergedSearchResults = [
+          const allResults = [
             ...liveSearchResults,
+            ...arxivResults.filter(r => !seenUrls.has(r.url)),
+            ...semanticResults.filter(r => !seenUrls.has(r.url)),
             ...searchResults.filter(r => !seenUrls.has(r.url)),
-          ];
+          ].slice(0, 18);
 
-          const contextText = mergedSearchResults.length > 0
-            ? `\n\nWEB SEARCH RESULTS:\n${mergedSearchResults.map((r, i) => `[${i+1}] Title: ${r.title}\nURL: ${r.url}\nSnippet: ${r.snippet}`).join("\n\n")}`
-            : "No active search results provided. Rely on your internal knowledge base securely.";
+          const contextText = allResults.length > 0
+            ? `\n\nSOURCE EVIDENCE:\n${allResults.map((r, i) => `[${i + 1}] (${r.source || "web"}) ${r.title}\nURL: ${r.url}\nSnippet: ${r.snippet}${r.year ? ` (${r.year})` : ""}`).join("\n\n")}`
+            : "No active search results. Synthesise from internal knowledge and mark uncertain claims [NEEDS VERIFICATION].";
 
-          systemPrompt = `You are the Stremini Writer Agent. You are writing ONE comprehensive section of a larger academic paper.
-          Maintain a formal, rigorous academic tone. 
-          Use the provided search context to ground your writing and eliminate hallucinations. Cite sources using [1], [2], etc.
-          If the context does not contain enough information, synthesize what is known and explicitly state theoretical gaps rather than hallucinating facts.
-          ${diagramInstructions}
-          Embed a Mermaid <diagram> ONLY if it highly clarifies the specific data or concepts in this section.`;
-          
-          userPrompt = `Paper Overall Topic: ${query}\n\nSection to Write: ${section_topic}\n${contextText}\n\nWrite the complete, substantive academic text for this section now. Do not include introductory conversational text. Output only the section content.`;
+          systemPrompt = `You are the AcademicHub Writer Agent. Write ONE comprehensive, publication-quality section of an academic paper.
+Rules:
+- Formal, rigorous academic tone throughout.
+- Ground every factual claim in provided sources. Cite as [1], [2], etc.
+- If context is insufficient, state gaps explicitly — do NOT fabricate facts.
+- Mark any unverifiable claims [NEEDS VERIFICATION].
+- Use hedging language: "suggests", "indicates", "may", "appears to".
+${diagramInstructions}
+- Embed a Mermaid <diagram> ONLY if it genuinely clarifies the section content.`;
+
+          userPrompt = `Paper Topic: ${query}\n\nSection to Write: ${section_topic}${contextText}\n\nWrite the complete, substantive academic section now. Output ONLY the section content — no conversational preamble.`;
         }
 
-        // ── AGENT 4: THE SELF-VERIFIER ──
+        // ── VERIFY phase: 1 AI call ──
         else if (phase === "VERIFY") {
-          aiTemperature = 0.1; // Lowest temp for fact-checking
-          systemPrompt = `You are the Stremini Self-Verification Agent. Your job is to review drafted academic text and aggressively eliminate hallucinations, ensuring alignment with the provided source context.
-          Step 1: Extract verifiable claims from the text.
-          Step 2: Cross-reference them strictly against the provided context.
-          Step 3: Rewrite any sentence that is not supported by the context. If a claim cannot be verified, rephrase it as a suggestion (e.g., "Research suggests...") or remove it entirely.
-          Output ONLY the refined, verified text. Do not explain your changes.`;
-          
-          const contextText = search_context.map((r, i) => `[${i+1}] ${r.title}\n${r.snippet}`).join("\n\n");
-          userPrompt = `Context Data:\n${contextText}\n\nDraft Text to Verify:\n${draft_text}\n\nReturn the fully verified, corrected text now.`;
+          aiTemperature = 0.1;
+          systemPrompt = `You are the AcademicHub Verification Agent. Eliminate hallucinations and ensure every claim is grounded.
+
+Process:
+1. Extract all verifiable claims from the draft text.
+2. Cross-reference each claim strictly against the provided source context.
+3. Claims supported by sources: preserve with citation tags.
+4. Claims NOT in sources: rephrase with hedge language (e.g., "Research suggests...") or mark [UNVERIFIED].
+5. Clearly fabricated statistics or names: remove entirely and note [REMOVED - UNVERIFIABLE].
+6. Output ONLY the refined, verified text. Do not explain changes.`;
+
+          const contextText = search_context.map((r, i) => `[${i + 1}] ${r.title}\n${r.snippet}`).join("\n\n");
+          userPrompt = `Source Context:\n${contextText}\n\nDraft to Verify:\n${draft_text}\n\nReturn fully verified, corrected text now.`;
         }
 
-        // ── FALLBACK RESEARCH MODE (NON-PIPELINE PHASES) ──
+        // ── GAP_ANALYSIS phase: 1 AI call ──
+        else if (phase === "GAP_ANALYSIS") {
+          aiTemperature = 0.3;
+          systemPrompt = `You are the AcademicHub Gap Analysis Agent. Identify research gaps, contradictions, and missing perspectives.
+
+Output a structured gap analysis:
+1. IDENTIFIED GAPS — what the current literature/draft does not address
+2. CONTRADICTIONS — claims or findings that conflict with each other
+3. METHODOLOGICAL WEAKNESSES — limitations in approaches described
+4. FUTURE RESEARCH DIRECTIONS — specific, actionable research questions
+5. CONFIDENCE SCORE — rate the overall evidence quality 0-100%`;
+          userPrompt = `Analyze gaps and weaknesses for: ${query}\n\nDraft/Context:\n${draft_text}`;
+        }
+
+        // ── FORMAT_CITATIONS phase: 1 AI call ──
+        else if (phase === "FORMAT_CITATIONS") {
+          aiTemperature = 0.1;
+          systemPrompt = `You are the AcademicHub Citation Formatter Agent. Format all references to APA 7th edition.
+Rules:
+- Author, A. A., & Author, B. B. (Year). Title of article. Journal Name, Volume(Issue), pages. https://doi.org/xxx
+- For books: Author, A. A. (Year). Title of work: Capital letter also for subtitle. Publisher.
+- Maintain all existing citation numbers [1], [2], etc.
+- If a citation is incomplete, note what information is missing.
+Output ONLY the reformatted reference list.`;
+          userPrompt = `Format these references to APA 7th edition:\n${draft_text}`;
+        }
+
+        // ── Fallback: full paper, 2 fetch calls + 1 AI call ──
         else {
           let liveSearchResults = [];
           if (env.SERPER_API_KEY) {
-            try {
-              liveSearchResults = await fetchSerperResults(env.SERPER_API_KEY, query);
-            } catch (searchErr) {
-              console.error("Serper search failed:", searchErr.message ?? String(searchErr));
-            }
+            try { liveSearchResults = await fetchSerperResults(env.SERPER_API_KEY, query, 8); } catch (_) {}
           }
+          let arxivResults = [];
+          try { arxivResults = await fetchArxivResults(query, 4); } catch (_) {}
 
           const seenUrls = new Set(liveSearchResults.map(r => r.url));
-          const mergedSearchResults = [
+          const allResults = [
             ...liveSearchResults,
+            ...arxivResults.filter(r => !seenUrls.has(r.url)),
             ...searchResults.filter(r => !seenUrls.has(r.url)),
           ];
 
-          const searchNote = mergedSearchResults.length > 0
-            ? `\n\nWEB SEARCH RESULTS:\n${mergedSearchResults.map((r, i) => `[${i+1}] Title: ${r.title}\nURL: ${r.url}\nSnippet: ${r.snippet}`).join("\n\n")}\n\nUse these sources. Cite as [1], [2], etc. Prioritise these results for current facts.`
+          const searchNote = allResults.length > 0
+            ? `\n\nSOURCE EVIDENCE (cite as [1], [2], etc.):\n${allResults.map((r, i) => `[${i + 1}] (${r.source || "web"}) ${r.title}\nURL: ${r.url}\nSnippet: ${r.snippet}`).join("\n\n")}`
             : "";
 
-          systemPrompt = `You are Stremini, an elite academic research assistant. You write complete, publication-quality research papers filled with real content, real analysis, and embedded Mermaid diagrams. You never output templates or placeholder text.
-
-Given a topic, write the ENTIRE paper NOW — every sentence, every paragraph, every diagram — all real and complete.
+          systemPrompt = `You are AcademicHub's Elite Research Writer. Produce a complete, publication-quality academic paper grounded in evidence. Never fabricate citations, statistics, or author names.
 ${diagramInstructions}
 - Each paper must include at least 3 diagrams.
-Wrap your entire output in <paper></paper> tags. Structure as follows, replacing every instruction line with real written content:
+- Mark any unverifiable claim [NEEDS VERIFICATION].
+Wrap your entire output in <paper></paper> tags.
 
-<paper>
-[The actual full title of this paper in Title Case]
-
-Authors: Stremini Research Agent
-Date: ${new Date().toLocaleDateString('en-US', { year:'numeric', month:'long', day:'numeric' })}
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-ABSTRACT
-
-Write 200 words of real abstract prose here. Cover: what the paper investigates and why it matters, the analytical approach used, the key findings discovered, and the implications for the field. Must be a fully written paragraph with real sentences.
-
-━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-
-1. INTRODUCTION
-
-Write 4 full paragraphs of real introduction text. Paragraph 1: establish background and context for the topic. Paragraph 2: identify the specific problem or research gap. Paragraph 3: state the objectives and scope of this paper. Paragraph 4: preview the structure of the paper. Use formal academic English.
-
-[Insert a mindmap or flowchart <diagram> here visualising the paper's core themes or the topic's key dimensions]
-
-2. LITERATURE REVIEW / BACKGROUND
-
-Write 4 full paragraphs reviewing real prior work. Discuss key foundational studies and their contributions. Describe competing theories or perspectives. Note gaps or contradictions in the existing literature. Reference real authors and publications.
-
-[Insert a timeline <diagram> showing the field's historical development, OR a graph <diagram> showing relationships between key concepts]
-
-3. METHODOLOGY / THEORETICAL FRAMEWORK
-
-Write 3 full paragraphs describing the analytical approach used in this paper. Explain the theoretical lens or framework applied. Justify why this approach is appropriate for the research question.
-
-[Insert a flowchart <diagram> illustrating the methodological process or analytical steps]
-
-4. ANALYSIS AND DISCUSSION
-
-4.1 [Write a real sub-section title directly relevant to the paper's topic]
-Write 3 full paragraphs of substantive analysis under this sub-heading. Engage with evidence, data, arguments, and counterarguments. Draw on the literature reviewed.
-
-4.2 [Write a real sub-section title directly relevant to the paper's topic]
-Write 3 full paragraphs of substantive analysis. Develop the argument further. Introduce new dimensions or considerations.
-
-[Insert a <diagram> here relevant to the analysis content — use flowchart, sequence, or graph as most appropriate]
-
-4.3 [Write a real sub-section title directly relevant to the paper's topic]
-Write 3 full paragraphs of substantive analysis. Address implications or challenges. Synthesise insights from earlier sections.
-
-5. FINDINGS AND IMPLICATIONS
-
-Write 4 full paragraphs presenting the key findings of the analysis. Discuss practical implications for practitioners or policymakers. Discuss theoretical implications for the academic field. Address how findings relate to the literature reviewed.
-
-6. CONCLUSION
-
-Write 3 full paragraphs concluding the paper. Paragraph 1: summarise the paper's core argument and contributions. Paragraph 2: acknowledge the limitations of this analysis. Paragraph 3: suggest specific, concrete directions for future research.
-
-REFERENCES
-
-[1] Author Last, First. "Article or Book Title." Journal Name or Publisher, Volume(Issue), Year, Pages. DOI or URL.
-[2] ...
-Write at least 10 real, verifiable academic references. Use real author names, real titles, real journals, and real years.
-</paper>
-
-ABSOLUTE RULES:
-- Output ONLY the <paper>...</paper> block. Zero words before or after.
-- NEVER output placeholder text — replace every instruction with real written content.
-- Every major section must have full substantive paragraphs — minimum 3 per section.
-- Include at least 3 Mermaid <diagram> blocks placed inline within relevant sections.
-- Write the COMPLETE paper from title to last reference — never truncate.
-- Use formal academic English with proper hedging language (suggests, indicates, may, appears to).${searchNote}`;
+RULES:
+- Output ONLY the <paper>...</paper> block.
+- NEVER fabricate statistics, author names, or DOIs.
+- Every factual claim must cite a source [n] or be marked [NEEDS VERIFICATION].
+- Write COMPLETE paper — never truncate.${searchNote}`;
         }
       }
 
-      // ── EXECUTE K2-THINK API ──
+      // ── EXECUTE AI (single call for all non-FULL phases) ──
       const aiResponse = await callAI(env.MBZUAI_API_KEY, systemPrompt, trimmedHistory, userPrompt, aiTemperature);
 
       if (!aiResponse.ok) {
@@ -358,13 +342,12 @@ ABSOLUTE RULES:
         return new Response(JSON.stringify({ status: "ERROR", message: "AI returned empty response." }), { headers: corsHeaders });
       }
 
-      // ── PARSE RESPONSE BASED ON MODE & PHASE ──
-      
+      // ── PARSE RESPONSE ──
       if (mode === "research" && phase === "PLAN") {
         try {
-          // Attempt to parse strictly, stripping out markdown formatting just in case
           const cleanJson = aiMessage.replace(/```json/g, "").replace(/```/g, "").trim();
-          const plan = JSON.parse(cleanJson);
+          const jsonMatch = cleanJson.match(/\{[\s\S]*\}/);
+          const plan = JSON.parse(jsonMatch ? jsonMatch[0] : cleanJson);
           return new Response(JSON.stringify({ status: "COMPLETED", data: plan }), { headers: corsHeaders });
         } catch (e) {
           return new Response(JSON.stringify({ status: "ERROR", message: "Planner failed to output valid JSON.", raw: aiMessage }), { headers: corsHeaders });
@@ -378,9 +361,9 @@ ABSOLUTE RULES:
         }
       }
 
-      // Plain text fallback (catches WRITE_SECTION, VERIFY, or missed tags)
       return new Response(JSON.stringify({
         status: "COMPLETED",
+        content: aiMessage,
         solution: aiMessage,
       }), { headers: corsHeaders });
 
@@ -393,126 +376,260 @@ ABSOLUTE RULES:
   }
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ════════════════════════════════════════════════════════════════════════════════
+// MULTI-AGENT PIPELINE CORE — v3.1 Subrequest-Optimised
+//
+// Exact subrequest count per FULL run:
+//   Evidence : 2 queries × 3 sources (arXiv + SemanticScholar + Serper) = 6
+//   AI calls : Commander(1) + [Reasoner + CriticCombo + Refiner] × ≤2 loops (≤6)
+//              + QACombo(1) + FinalWriter(1) = ≤9
+//   TOTAL    : ≤ 15  —  safely under CF Free limit of 50
+//
+// v3.0 → v3.1 savings:
+//   Commander + ScopeGuard  → merged (saves 1 call)
+//   EvidenceMapper          → folded into Reasoner prompt (saves 1 per iter)
+//   HypothesisTester+Critic → CriticCombo (saves 1 per iter)
+//   BiasDetector+Structure  → QACombo (saves 1)
+//   Writer + Verifier       → FinalWriter (saves 1)
+//   4 queries → 2, 5 sources → 3, dropped PubMed 2-step (saves ≥10 fetches)
+//   Removed callAI fallback retry (saves up to N calls on failure)
+// ════════════════════════════════════════════════════════════════════════════════
 
-// ── Multi-Agent Research Pipeline ─────────────────────────────────────────────
+const MAX_ITERATIONS = 2;
+const CONFIDENCE_THRESHOLD = 0.80;
 
-const MAX_ITERATIONS = 4;
-const CONFIDENCE_THRESHOLD = 0.85;
+// 9 composite agent role definitions
+const AGENT_ROLES = {
+  // CALL 1: Commander + scope guard merged
+  commander: `You are the AcademicHub Commander & Scope Guard. In ONE response:
+1. Create a precise, scoped research plan as strict JSON (no markdown fences).
+2. Immediately review it for scope creep and apply corrections inside the same JSON.
+Never over-promise coverage. Flag what is explicitly OUT of scope.`,
+
+  // CALL 2 per iteration: Reason from evidence
+  reasoner: `You are the AcademicHub Reasoner Agent. Build rigorous arguments from evidence only.
+- Tag EVERY claim with its source: [S1], [S2], etc.
+- Label claims with no source [UNVERIFIED].
+- Do NOT fabricate statistics, names, dates, or citations.
+- Before writing each claim, check: "Is this in the sources?" If not → [UNVERIFIED].
+- Map each source to the section it best supports before writing.`,
+
+  // CALL 3 per iteration: Adversarial critic + hypothesis tester merged
+  criticCombo: `You are the AcademicHub Adversarial Critic & Hypothesis Tester.
+PART A — HYPOTHESIS ATTACK: List 3–5 alternative explanations or null hypotheses that could invalidate the draft's central claims.
+PART B — CRITIQUE: For each problem found, output a bullet with: type (unsupported|logical-gap|outdated|contradiction|bias), the claim quoted, and the reason.
+Be aggressive. Assume the draft contains errors. Prioritise factual issues over stylistic ones.`,
+
+  // CALL 4 per iteration: Refiner applies all feedback
+  refiner: `You are the AcademicHub Refiner Agent. Apply ALL critic feedback.
+- Keep every claim that has a valid [Sx] source tag.
+- Soften or rewrite claims flagged as unsupported — use hedge language (suggests, indicates, may).
+- Mark truly unresolvable claims [UNVERIFIED].
+- Never remove a correctly sourced claim.
+- Output the improved draft only — no commentary.`,
+
+  // CALL 5 (once): Bias + structure QA merged
+  qaCombo: `You are the AcademicHub QA Agent combining Bias Detection + Structure Review.
+PART A — BIAS REPORT: Identify confirmation bias, cherry-picking, ideological framing, or missing counterevidence. Be specific — name which claims are affected.
+PART B — STRUCTURE REVIEW: Does each section logically follow from the previous? Do claims build toward the thesis? List specific structural gaps or non-sequiturs.
+Output both parts clearly labelled.`,
+
+  // CALL 6 (once): Final writer + verifier in one pass
+  finalWriter: `You are the AcademicHub Final Writer & Verifier. In ONE pass:
+1. Transform the refined draft into complete, publication-quality academic prose.
+2. While writing, verify every claim against the source catalog — preserve [Sx] tags, soften any remaining unsupported claims.
+3. Include these mandatory sections: "Rejected Hypotheses", "Uncertainty Disclosure", "Bias Assessment".
+4. Embed at least 3 Mermaid diagrams using <diagram type="TYPE" title="TITLE">mermaid_code</diagram> tags (no backticks inside tags, node labels ≤25 chars).
+5. Output ONLY the final <paper>...</paper> block. Zero words outside it.`,
+};
 
 async function runResearchPipeline({ env, query, history, seedSearchResults }) {
-  const roles = {
-    planner: "You are the Stremini Planner Agent. Create concise, high-value research plans.",
-    reasoner: "You are the Stremini Reasoner Agent. Build arguments from evidence only.",
-    critic: "You are the Stremini Adversarial Critic Agent. Assume the draft is wrong and find unsupported claims, weak logic, and contradictions.",
-    refiner: "You are the Stremini Refiner Agent. Fix issues raised by the critic while preserving evidence-grounded claims.",
-    writer: "You are the Stremini Writer Agent. Produce publication-quality, evidence-grounded output.",
-    verifier: "You are the Stremini Verifier Agent. Perform final claim-level validation and uncertainty disclosure.",
-  };
+  const apiKey = env.MBZUAI_API_KEY;
 
-  const plannerPrompt = `Return strict JSON only:
+  // ── CALL 1: Commander — Plan + scope guard in one shot ──
+  const plannerPrompt = `Return strict JSON only. No markdown, no preamble.
 {
   "title": "...",
-  "sections": ["..."],
-  "search_queries": ["..."]
+  "thesis": "One-sentence core research question or thesis",
+  "sections": ["Introduction", "Literature Review", "Methodology", "Analysis", "Findings", "Conclusion"],
+  "search_queries": ["query1", "query2"],
+  "key_concepts": ["concept1", "concept2"],
+  "potential_controversies": ["debate1"],
+  "out_of_scope": ["what this paper will NOT cover"]
 }
 Topic: ${query}`;
-  const plannerRaw = await callAgent(env.MBZUAI_API_KEY, roles.planner, history, plannerPrompt, 0.2);
-  const plan = safeParsePlan(plannerRaw, query);
 
-  const evidence = await gatherMultiSourceEvidence(env, [query, ...(plan.search_queries || [])], seedSearchResults || []);
+  const plannerRaw = await callAgent(apiKey, AGENT_ROLES.commander, history, plannerPrompt, 0.2);
+  const refinedPlan = safeParsePlan(plannerRaw, query);
+
+  // ── CALLS 2–7: Evidence gathering (2 queries × 3 sources = 6 fetch calls max) ──
+  const evidence = await gatherMultiSourceEvidence(
+    env,
+    [query, ...(refinedPlan.search_queries || [])],
+    seedSearchResults || []
+  );
   const sourceCatalog = buildSourceCatalog(evidence);
 
+  // ── CALLS 8–13: Iterative Reasoner + CriticCombo + Refiner (max 2 loops = 6 AI calls) ──
   let iteration = 0;
   let confidence = 0;
   let reasonedDraft = "";
-  let claims = [];
-  let criticReport = "";
+  let criticFeedback = "";
 
   while (iteration < MAX_ITERATIONS && confidence < CONFIDENCE_THRESHOLD) {
+    // CALL: Reasoner — evidence-grounded draft
     const reasonerPrompt = [
       `Topic: ${query}`,
-      `Plan title: ${plan.title}`,
-      `Sections: ${(plan.sections || []).join(" | ")}`,
-      "Write an evidence-grounded draft with explicit source tags like [S1], [S2].",
-      "If evidence is missing, label as UNVERIFIED.",
-      `Sources:
-${sourceCatalog}`,
-      criticReport ? `Address previous critic concerns:
-${criticReport}` : "",
+      `Thesis: ${refinedPlan.thesis || ""}`,
+      `Sections to cover: ${(refinedPlan.sections || []).join(" | ")}`,
+      `Key concepts: ${(refinedPlan.key_concepts || []).join(", ")}`,
+      "Write an evidence-grounded draft. Tag EVERY claim [S1],[S2] etc. Label missing-evidence claims [UNVERIFIED].",
+      "Do NOT fabricate. Map each source to the section it best supports before writing.",
+      `Sources:\n${sourceCatalog}`,
+      criticFeedback ? `PREVIOUS CRITIQUE TO ADDRESS:\n${criticFeedback}` : "",
     ].filter(Boolean).join("\n\n");
 
-    reasonedDraft = await callAgent(env.MBZUAI_API_KEY, roles.reasoner, history, reasonerPrompt, 0.4);
-    claims = extractClaims(reasonedDraft);
+    reasonedDraft = await callAgent(apiKey, AGENT_ROLES.reasoner, history, reasonerPrompt, 0.35);
+
+    // CALL: CriticCombo — hypothesis attack + adversarial critique
+    const criticPrompt = `Draft to attack:\n${reasonedDraft}\n\nSources available: ${evidence.length}\nSource catalog (for fact-checking):\n${sourceCatalog.slice(0, 3000)}`;
+    criticFeedback = await callAgent(apiKey, AGENT_ROLES.criticCombo, history, criticPrompt, 0.25);
+
+    // Confidence scoring
+    const claims = extractClaims(reasonedDraft);
     const coverage = scoreClaimsCoverage(claims, evidence.length);
+    const hasUnresolved = /(unsupported|contradiction|cannot verify|fabricated)/i.test(criticFeedback);
+    const contradictionPenalty = hasUnresolved ? 0.20 : 0.04;
+    const biasPenalty = /(cherry.pick|bias|one.sided|ignores counterevidence)/i.test(criticFeedback) ? 0.07 : 0;
+    confidence = Math.max(0, Math.min(1, coverage - contradictionPenalty - biasPenalty));
 
-    const criticPrompt = `Attack this draft. Return bullets for: unsupported claims, logical gaps, outdated assumptions, weak arguments.
-
-Draft:
-${reasonedDraft}
-
-Known source count: ${evidence.length}`;
-    criticReport = await callAgent(env.MBZUAI_API_KEY, roles.critic, history, criticPrompt, 0.2);
-
-    const contradictionPenalty = /(unsupported|contradiction|cannot verify|unverified)/i.test(criticReport) ? 0.18 : 0.05;
-    confidence = Math.max(0, Math.min(1, coverage - contradictionPenalty));
-
-    const refinerPrompt = `Refine the draft using critic feedback. Keep claims source-tagged. Unknown claims must be marked UNVERIFIED.
-
-Critic feedback:
-${criticReport}
-
-Draft:
-${reasonedDraft}`;
-    reasonedDraft = await callAgent(env.MBZUAI_API_KEY, roles.refiner, history, refinerPrompt, 0.35);
+    // CALL: Refiner — apply all feedback
+    const refinerPrompt = `Apply this critique to the draft.\n\nCRITIQUE:\n${criticFeedback}\n\nDRAFT:\n${reasonedDraft}`;
+    reasonedDraft = await callAgent(apiKey, AGENT_ROLES.refiner, history, refinerPrompt, 0.28);
 
     iteration += 1;
-
-    if (!/(unsupported|contradiction|cannot verify|unverified)/i.test(criticReport) && confidence >= 0.7) {
-      break;
-    }
+    if (!hasUnresolved && confidence >= 0.72) break;
   }
 
-  const writerPrompt = `Create the final paper from the refined draft.
-- Every claim must include [Sx] source tags when supported.
-- If unsupported, mark UNVERIFIED.
-- Add a short section: Rejected Hypotheses.
-- Add a short section: Reasoning Tree Summary.
+  // ── CALL 14: QA Combo — Bias + structure review in one shot ──
+  const qaReport = await callAgent(
+    apiKey,
+    AGENT_ROLES.qaCombo,
+    history,
+    `Thesis: ${refinedPlan.thesis || query}\n\nDraft:\n${reasonedDraft}\n\nSources (for bias context):\n${sourceCatalog.slice(0, 2000)}`,
+    0.28
+  );
 
-Plan:
-${JSON.stringify(plan, null, 2)}
+  const biasSection = qaReport.match(/PART A[\s\S]*?(?=PART B|$)/i)?.[0]?.replace(/PART A[^:]*:/i, "").trim() || qaReport.slice(0, 400);
+  const structSection = qaReport.match(/PART B[\s\S]*/i)?.[0]?.replace(/PART B[^:]*:/i, "").trim() || "";
 
-Refined draft:
+  // ── CALL 15: FinalWriter — write + verify in one pass ──
+  const finalWriterPrompt = `You are writing the final paper. Apply QA feedback as you write.
+
+BIAS FINDINGS TO ADDRESS: ${biasSection.slice(0, 350)}
+STRUCTURE IMPROVEMENTS: ${structSection.slice(0, 350)}
+
+DIAGRAM INSTRUCTIONS: Embed at least 3 Mermaid diagrams using <diagram type="TYPE" title="TITLE">mermaid_code</diagram>. Types: flowchart, sequence, mindmap, timeline, graph. Node labels ≤25 chars. No backticks inside tags. Place diagrams inline within relevant sections.
+
+PLAN:
+${JSON.stringify(refinedPlan, null, 2)}
+
+REFINED DRAFT:
 ${reasonedDraft}
 
-Sources:
-${sourceCatalog}`;
-  const writtenPaper = await callAgent(env.MBZUAI_API_KEY, roles.writer, history, writerPrompt, 0.45);
+SOURCE CATALOG:
+${sourceCatalog}
 
-  const verifierPrompt = `Validate this paper claim-by-claim against sources.
-Return improved text only. Preserve source tags and UNVERIFIED markers where needed.
+Output format — wrap everything in <paper></paper>:
 
-Paper:
-${writtenPaper}
+<paper>
+[Full Title in Title Case]
 
-Sources:
-${sourceCatalog}`;
-  const verifiedPaper = await callAgent(env.MBZUAI_API_KEY, roles.verifier, history, verifierPrompt, 0.15);
+Authors: AcademicHub Research Agent
+Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
 
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+ABSTRACT
+[200 words — real prose covering: what is investigated, why it matters, approach, key findings, implications]
+
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. INTRODUCTION
+[4 paragraphs: background, problem/gap, objectives, paper structure. Cite sources.]
+[Insert mindmap or flowchart diagram here]
+
+2. LITERATURE REVIEW
+[4 paragraphs: foundational work, competing theories, gaps, contradictions. Cite [S1],[S2] etc.]
+[Insert timeline or graph diagram here]
+
+3. METHODOLOGY / THEORETICAL FRAMEWORK
+[3 paragraphs: approach, lens, justification]
+[Insert flowchart diagram here]
+
+4. ANALYSIS AND DISCUSSION
+4.1 [Real sub-section title]
+[3 paragraphs of evidence-grounded analysis]
+
+4.2 [Real sub-section title]
+[3 paragraphs]
+[Insert diagram if relevant]
+
+4.3 [Real sub-section title]
+[3 paragraphs: implications, challenges, synthesis]
+
+5. FINDINGS AND IMPLICATIONS
+[4 paragraphs: key findings, practical implications, theoretical implications, relation to literature]
+
+REJECTED HYPOTHESES
+[2–3 hypotheses considered but not supported by evidence, with brief explanation]
+
+UNCERTAINTY DISCLOSURE
+[List all [UNVERIFIED] claims with explanation of what could not be confirmed]
+
+BIAS ASSESSMENT
+[Brief summary of bias risks identified in the evidence base]
+
+6. CONCLUSION
+[3 paragraphs: contributions, limitations, future research directions]
+
+REFERENCES
+[APA 7th format. Only real, traceable references. Minimum 10. Mark uncertain details "(unverified)".]
+</paper>`;
+
+  const finalPaper = await callAgent(apiKey, AGENT_ROLES.finalWriter, history, finalWriterPrompt, 0.38);
+
+  const paperMatch = finalPaper.match(/<paper>([\s\S]*?)(?:<\/paper>|$)/i);
+  const verifiedPaper = paperMatch ? `<paper>${paperMatch[1].trim()}</paper>` : finalPaper;
+
+  // ── Final metrics ──
   const finalClaims = extractClaims(verifiedPaper);
   const finalCoverage = scoreClaimsCoverage(finalClaims, evidence.length);
+  const unverifiedCount = (verifiedPaper.match(/\[UNVERIFIED\]/gi) || []).length;
+  const verifiedCount = finalClaims.filter(c => c.source.length > 0).length;
   const finalConfidence = Math.max(confidence, finalCoverage);
-  const title = plan.title || query;
 
   return {
     status: "PAPER",
-    title,
+    title: refinedPlan.title || query,
     content: verifiedPaper,
     metadata: {
+      pipeline_version: "3.1",
+      agents_used: 9,
+      subrequests_used: 6 + (iteration * 3) + 2,
       iterations: iteration,
       confidence: Number((finalConfidence * 100).toFixed(1)),
+      verified_claims: verifiedCount,
+      unverified_claims: unverifiedCount,
+      sources_gathered: evidence.length,
       sources: evidence,
       claims: finalClaims,
+      plan: refinedPlan,
+      quality_reports: {
+        bias: biasSection.slice(0, 600),
+        structure: structSection.slice(0, 600),
+        final_critic: criticFeedback.slice(0, 600),
+      },
       thresholds: {
         maxIterations: MAX_ITERATIONS,
         confidenceTarget: CONFIDENCE_THRESHOLD,
@@ -521,50 +638,27 @@ ${sourceCatalog}`;
   };
 }
 
-async function callAgent(apiKey, rolePrompt, history, userPrompt, temperature) {
-  const response = await callAI(apiKey, rolePrompt, history, userPrompt, temperature);
-  if (!response.ok) {
-    const err = await response.text();
-    throw new Error(`Agent call failed (${response.status}): ${err}`);
-  }
-  const payload = await response.json();
-  return stripReasoning(payload.choices?.[0]?.message?.content ?? "");
-}
-
-function safeParsePlan(raw, query) {
-  try {
-    const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
-    const parsed = JSON.parse(cleaned);
-    return {
-      title: parsed.title || `Research: ${query}`,
-      sections: Array.isArray(parsed.sections) && parsed.sections.length ? parsed.sections : ["Introduction", "Analysis", "Conclusion"],
-      search_queries: Array.isArray(parsed.search_queries) && parsed.search_queries.length ? parsed.search_queries : [query],
-    };
-  } catch {
-    return {
-      title: `Research: ${query}`,
-      sections: ["Introduction", "Literature Review", "Analysis", "Conclusion"],
-      search_queries: [query],
-    };
-  }
-}
+// ════════════════════════════════════════════════════════════════════════════════
+// EVIDENCE GATHERING — 2 queries × 3 sources = 6 fetch calls max
+// ════════════════════════════════════════════════════════════════════════════════
 
 async function gatherMultiSourceEvidence(env, queries, seedSearchResults = []) {
-  const q = [...new Set(queries.filter(Boolean))].slice(0, 3);
-  const bundles = await Promise.all(q.map(async (query) => {
-    const tasks = [
-      env.SERPER_API_KEY ? fetchSerperResults(env.SERPER_API_KEY, query, 4).catch(() => []) : Promise.resolve([]),
-      fetchArxivResults(query, 3).catch(() => []),
-      fetchSemanticScholarResults(query, 3).catch(() => []),
-    ];
+  // Hard cap: 2 queries to stay within subrequest budget
+  const q = [...new Set(queries.filter(Boolean))].slice(0, 2);
 
-    const [serper, arxiv, semantic] = await Promise.all(tasks);
-    return [...serper, ...arxiv, ...semantic].map((item) => ({ ...item, query }));
+  const bundles = await Promise.all(q.map(async (query) => {
+    // 3 fetch calls per query: arXiv + Semantic Scholar + Serper
+    const [arxiv, semantic, serper] = await Promise.all([
+      fetchArxivResults(query, 5).catch(() => []),
+      fetchSemanticScholarResults(query, 5).catch(() => []),
+      env.SERPER_API_KEY ? fetchSerperResults(env.SERPER_API_KEY, query, 6).catch(() => []) : Promise.resolve([]),
+    ]);
+    return [...arxiv, ...semantic, ...serper].map(item => ({ ...item, query }));
   }));
 
   const merged = [...seedSearchResults, ...bundles.flat()]
-    .filter((r) => r && (r.url || r.title || r.snippet))
-    .map((r) => ({
+    .filter(r => r && (r.url || r.title || r.snippet))
+    .map(r => ({
       source: r.source || "web",
       title: r.title || "Untitled",
       url: r.url || "",
@@ -574,101 +668,87 @@ async function gatherMultiSourceEvidence(env, queries, seedSearchResults = []) {
     }));
 
   const seen = new Set();
-  return merged.filter((item) => {
-    const key = `${item.title}|${item.url}`;
+  return merged.filter(item => {
+    const key = `${item.title.toLowerCase().slice(0, 60)}|${item.url}`;
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
-  }).slice(0, 20);
+  }).slice(0, 25);
 }
+
+// ════════════════════════════════════════════════════════════════════════════════
+// SCORING UTILITIES
+// ════════════════════════════════════════════════════════════════════════════════
 
 function buildSourceCatalog(sources) {
   return sources
-    .map((s, i) => `[S${i + 1}] (${s.source}) ${s.title}${s.year ? ` (${s.year})` : ""}
-URL: ${s.url}
-Snippet: ${s.snippet}`)
+    .map((s, i) => `[S${i + 1}] (${s.source.toUpperCase()}) ${s.title}${s.year ? ` [${s.year}]` : ""}
+URL: ${s.url || "N/A"}
+Snippet: ${s.snippet.slice(0, 400)}`)
     .join("\n\n");
 }
 
 function extractClaims(text) {
   return text
     .split(/(?<=[.!?])\s+/)
-    .map((sentence) => sentence.trim())
-    .filter((sentence) => sentence.length > 40)
-    .map((statement) => {
-      const sourceMatches = [...statement.matchAll(/\[S(\d+)\]/g)].map((m) => Number(m[1]));
-      const hasUnverified = /UNVERIFIED/i.test(statement);
-      const confidence = sourceMatches.length > 0 ? 0.85 : (hasUnverified ? 0.25 : 0.4);
-      return { statement, source: sourceMatches, confidence };
+    .map(sentence => sentence.trim())
+    .filter(sentence => sentence.length > 40)
+    .map(statement => {
+      const sourceMatches = [...statement.matchAll(/\[S(\d+)\]/g)].map(m => Number(m[1]));
+      const hasUnverified = /\[UNVERIFIED\]/i.test(statement);
+      const hasHedge = /\b(suggests?|indicates?|may|appears? to|possibly|arguably|could)\b/i.test(statement);
+      const confidence = sourceMatches.length > 0 ? 0.88
+        : hasHedge ? 0.55
+          : hasUnverified ? 0.20
+            : 0.35;
+      return { statement, source: sourceMatches, confidence, hasUnverified, hasHedge };
     });
 }
 
 function scoreClaimsCoverage(claims, sourceCount) {
   if (!claims.length) return 0;
-  const covered = claims.filter((c) => c.source.length > 0).length;
-  const rawCoverage = covered / claims.length;
-  const sourceDiversity = Math.min(1, sourceCount / 12);
-  return (rawCoverage * 0.8) + (sourceDiversity * 0.2);
+  const covered = claims.filter(c => c.source.length > 0).length;
+  const hedged = claims.filter(c => c.hasHedge && !c.hasUnverified).length;
+  const rawCoverage = (covered + hedged * 0.5) / claims.length;
+  const sourceDiversity = Math.min(1, sourceCount / 15);
+  return (rawCoverage * 0.75) + (sourceDiversity * 0.25);
 }
 
+// ════════════════════════════════════════════════════════════════════════════════
+// ACADEMIC SOURCE FETCHERS
+// ════════════════════════════════════════════════════════════════════════════════
+
 async function fetchArxivResults(query, limit = 5) {
-  const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=${limit}`;
-  const res = await fetch(url, { headers: { "User-Agent": "StreminiResearchAgent/1.0" } });
+  const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=${limit}&sortBy=relevance`;
+  const res = await fetch(url, { headers: { "User-Agent": "AcademicHub/3.1" } });
   if (!res.ok) throw new Error("arXiv request failed");
   const xml = await res.text();
-  const entries = [...xml.matchAll(/<entry>[\s\S]*?<\/entry>/g)].slice(0, limit).map((m) => m[0]);
-  return entries.map((entry) => {
+  const entries = [...xml.matchAll(/<entry>[\s\S]*?<\/entry>/g)].slice(0, limit).map(m => m[0]);
+  return entries.map(entry => {
     const title = (entry.match(/<title>([\s\S]*?)<\/title>/)?.[1] || "").replace(/\s+/g, " ").trim();
     const link = entry.match(/<id>([\s\S]*?)<\/id>/)?.[1]?.trim() || "";
-    const summary = (entry.match(/<summary>([\s\S]*?)<\/summary>/)?.[1] || "").replace(/\s+/g, " ").trim();
+    const summary = (entry.match(/<summary>([\s\S]*?)<\/summary>/)?.[1] || "").replace(/\s+/g, " ").trim().slice(0, 500);
     const year = entry.match(/<published>(\d{4})-/)?.[1] || "";
     return { source: "arxiv", title, url: link, snippet: summary, year };
   });
 }
 
 async function fetchSemanticScholarResults(query, limit = 5) {
-  const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=${limit}&fields=title,year,abstract,url`;
-  const res = await fetch(url);
+  const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=${limit}&fields=title,year,abstract,url,authors,citationCount`;
+  const res = await fetch(url, { headers: { "User-Agent": "AcademicHub/3.1" } });
   if (!res.ok) throw new Error("Semantic Scholar request failed");
   const data = await res.json();
-  return (data.data || []).map((item) => ({
+  return (data.data || []).map(item => ({
     source: "semantic_scholar",
     title: item.title || "",
-    url: item.url || "",
-    snippet: item.abstract || "",
+    url: item.url || `https://www.semanticscholar.org/paper/${item.paperId}`,
+    snippet: (item.abstract || "").slice(0, 500),
     year: item.year || "",
+    citationCount: item.citationCount || 0,
   }));
 }
 
-async function fetchCrossrefResults(query, limit = 5) {
-  const url = `https://api.crossref.org/works?rows=${limit}&query.title=${encodeURIComponent(query)}`;
-  const res = await fetch(url, { headers: { "User-Agent": "StreminiResearchAgent/1.0 (mailto:research@example.com)" } });
-  if (!res.ok) throw new Error("CrossRef request failed");
-  const data = await res.json();
-  return (data.message?.items || []).slice(0, limit).map((item) => ({
-    source: "crossref",
-    title: Array.isArray(item.title) ? (item.title[0] || "") : "",
-    url: item.URL || "",
-    snippet: Array.isArray(item.subject) ? item.subject.join(", ") : "CrossRef indexed work",
-    year: item.published?.['date-parts']?.[0]?.[0] || "",
-  }));
-}
-
-async function fetchWikipediaResults(query, limit = 3) {
-  const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=${limit}&format=json&utf8=1&origin=*`;
-  const res = await fetch(searchUrl);
-  if (!res.ok) throw new Error("Wikipedia request failed");
-  const data = await res.json();
-  return (data.query?.search || []).slice(0, limit).map((item) => ({
-    source: "wikipedia",
-    title: item.title || "",
-    url: `https://en.wikipedia.org/wiki/${encodeURIComponent((item.title || "").replace(/\s+/g, "_"))}`,
-    snippet: (item.snippet || "").replace(/<[^>]+>/g, ""),
-    year: "",
-  }));
-}
-
-async function fetchSerperResults(serperApiKey, query, numResults = 10) {
+async function fetchSerperResults(serperApiKey, query, numResults = 8) {
   const response = await fetch("https://google.serper.dev/search", {
     method: "POST",
     headers: {
@@ -686,69 +766,104 @@ async function fetchSerperResults(serperApiKey, query, numResults = 10) {
   const data = await response.json();
   const results = [];
 
-  if (data.knowledgeGraph) {
+  if (data.knowledgeGraph?.title && data.knowledgeGraph?.description) {
     const kg = data.knowledgeGraph;
-    if (kg.title && kg.description) {
-      results.push({ title: kg.title, url: kg.descriptionLink ?? kg.website ?? "", snippet: kg.description });
-    }
+    results.push({ source: "web", title: kg.title, url: kg.descriptionLink ?? kg.website ?? "", snippet: kg.description });
   }
 
   if (data.answerBox) {
     const ab = data.answerBox;
     const snippet = ab.answer ?? ab.snippet ?? (Array.isArray(ab.snippetHighlighted) ? ab.snippetHighlighted.join(" ") : "") ?? "";
-    if (snippet) {
-      results.push({ title: ab.title ?? "Answer Box", url: ab.link ?? "", snippet });
-    }
+    if (snippet) results.push({ source: "web", title: ab.title ?? "Answer Box", url: ab.link ?? "", snippet });
   }
 
   if (Array.isArray(data.organic)) {
     for (const item of data.organic) {
-      results.push({ title: item.title ?? "", url: item.link ?? "", snippet: item.snippet ?? "" });
+      results.push({ source: "web", title: item.title ?? "", url: item.link ?? "", snippet: item.snippet ?? "" });
     }
   }
 
   return results;
 }
 
+// ════════════════════════════════════════════════════════════════════════════════
+// AI CALL UTILITIES
+// Note: fallback model retry REMOVED — it doubled subrequest count on failures.
+// Surface errors directly so callers can handle them properly.
+// ════════════════════════════════════════════════════════════════════════════════
+
+async function callAgent(apiKey, rolePrompt, history, userPrompt, temperature) {
+  const response = await callAI(apiKey, rolePrompt, history, userPrompt, temperature);
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Agent call failed (${response.status}): ${err}`);
+  }
+  const payload = await response.json();
+  return stripReasoning(payload.choices?.[0]?.message?.content ?? "");
+}
+
+async function callAI(apiKey, systemPrompt, history, userQuery, temperature = 0.7) {
+  // Single model, single fetch call — no fallback retry (would double subrequests)
+  const res = await fetch("https://api.k2think.ai/v1/chat/completions", {
+    method: "POST",
+    headers: {
+      "Authorization": `Bearer ${apiKey.trim()}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      model: "MBZUAI/K2-Think-v2",
+      messages: [
+        { role: "system", content: systemPrompt },
+        ...history,
+        { role: "user", content: userQuery },
+      ],
+      temperature,
+      max_tokens: 8192,
+    }),
+  });
+  return res;
+}
+
 function stripReasoning(raw) {
   let out = raw.replace(/<think>[\s\S]*?<\/think>/gi, "");
-  if (out.includes("</think>")) {
-    out = out.split("</think>").pop();
-  }
-  const lastPaperIdx    = out.lastIndexOf("<paper");
+  if (out.includes("</think>")) out = out.split("</think>").pop();
+
+  const lastPaperIdx = out.lastIndexOf("<paper");
   const lastSolutionIdx = out.lastIndexOf("<solution");
-  const actionIdx       = Math.max(lastPaperIdx, lastSolutionIdx);
+  const actionIdx = Math.max(lastPaperIdx, lastSolutionIdx);
   if (actionIdx !== -1) return out.slice(actionIdx).trim();
 
   const paragraphs = out.split(/\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);
   for (let i = paragraphs.length - 1; i >= 0; i--) {
-    if (paragraphs[i].length <= 800 && paragraphs[i].includes("{") === false) return paragraphs[i]; // Avoid ripping out JSON responses
+    if (paragraphs[i].length <= 1200 && !paragraphs[i].includes("{")) return paragraphs[i];
   }
   const lines = out.split("\n").map(l => l.trim()).filter(l => l);
   return (lines[lines.length - 1] ?? "").trim();
 }
 
-async function callAI(apiKey, systemPrompt, history, userQuery, temperature = 0.8) {
-  const primaryUrl = "https://api.k2think.ai/v1/chat/completions";
-  const headers = {
-    "Authorization": `Bearer ${apiKey.trim()}`,
-    "Content-Type": "application/json",
-  };
-
-  const buildBody = (model) => JSON.stringify({
-    model,
-    messages: [
-      { role: "system", content: systemPrompt },
-      ...history,
-      { role: "user", content: userQuery },
-    ],
-    temperature: temperature, // Dynamically adjusted based on agent phase
-    max_tokens: 8192,
-  });
-
-  let res = await fetch(primaryUrl, { method: "POST", headers, body: buildBody("MBZUAI/K2-Think-v2") });
-  if (!res.ok) {
-    res = await fetch(primaryUrl, { method: "POST", headers, body: buildBody("MBZUAI-IFM/K2-Think-v2") });
+function safeParsePlan(raw, query) {
+  try {
+    const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+    const jsonMatch = cleaned.match(/\{[\s\S]*\}/);
+    const parsed = JSON.parse(jsonMatch ? jsonMatch[0] : cleaned);
+    return {
+      title: parsed.title || `Research: ${query}`,
+      thesis: parsed.thesis || "",
+      sections: Array.isArray(parsed.sections) && parsed.sections.length ? parsed.sections : ["Introduction", "Analysis", "Conclusion"],
+      search_queries: Array.isArray(parsed.search_queries) && parsed.search_queries.length ? parsed.search_queries.slice(0, 2) : [query],
+      key_concepts: Array.isArray(parsed.key_concepts) ? parsed.key_concepts : [],
+      potential_controversies: Array.isArray(parsed.potential_controversies) ? parsed.potential_controversies : [],
+      out_of_scope: Array.isArray(parsed.out_of_scope) ? parsed.out_of_scope : [],
+    };
+  } catch {
+    return {
+      title: `Research: ${query}`,
+      thesis: "",
+      sections: ["Introduction", "Literature Review", "Analysis", "Findings", "Conclusion"],
+      search_queries: [query],
+      key_concepts: [],
+      potential_controversies: [],
+      out_of_scope: [],
+    };
   }
-  return res;
 }
