@@ -10,13 +10,13 @@
 <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'Syne',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;background:#080810}
+html,body{height:100%;font-family:'Syne',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;background:#f6f8fb}
 
 :root{
   --gold:#d4a84b;--gold-lt:#f0c96a;--gold-dk:#a07828;--gold-glow:rgba(212,168,75,.22);
-  --bg:#080810;--bg2:#0d0d18;--bg3:#131323;--bg4:#1a1a2e;--bg5:#1f1f38;
-  --border:rgba(255,255,255,.06);--border-m:rgba(255,255,255,.1);--border-gold:rgba(212,168,75,.2);
-  --text:#ede8df;--text-2:#9993a8;--text-3:#4e4a5a;
+  --bg:#f6f8fb;--bg2:#ffffff;--bg3:#f3f5f9;--bg4:#e9edf5;--bg5:#dfe6f1;
+  --border:rgba(15,23,42,.12);--border-m:rgba(15,23,42,.2);--border-gold:rgba(212,168,75,.35);
+  --text:#0f172a;--text-2:#334155;--text-3:#64748b;
   --green:#34d399;--red:#f87171;--blue:#818cf8;--violet:#a78bfa;
   --sb-w:270px;
   --paper-bg:#faf8f3;--paper-text:#1a1714;--paper-text2:#4a4540;
@@ -25,14 +25,10 @@ html,body{height:100%;font-family:'Syne',sans-serif;-webkit-font-smoothing:antia
 }
 
 /* LAYOUT */
-.layout{display:grid;grid-template-columns:var(--sb-w) 1fr;height:100vh;overflow:hidden}
+.layout{display:grid;grid-template-columns:1fr;height:100vh;overflow:hidden}
 
 /* ══ SIDEBAR ══ */
-.sidebar{
-  display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;
-  background:var(--bg2);border-right:1px solid var(--border);
-  position:relative;
-}
+.sidebar{display:none}
 .sidebar::before{
   content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
   background:radial-gradient(ellipse 200px 300px at 50% 0%,rgba(212,168,75,.06) 0%,transparent 70%);
@@ -116,7 +112,7 @@ html,body{height:100%;font-family:'Syne',sans-serif;-webkit-font-smoothing:antia
 .topbar{
   padding:12px 28px;display:flex;align-items:center;justify-content:space-between;
   flex-shrink:0;border-bottom:1px solid var(--border);
-  background:rgba(8,8,16,.85);backdrop-filter:blur(12px);
+  background:rgba(255,255,255,.92);backdrop-filter:blur(12px);
 }
 .mode-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border:1px solid var(--border-gold);border-radius:20px;font-size:11.5px;font-weight:600;color:var(--gold-lt);background:rgba(212,168,75,.05);letter-spacing:.3px}
 .mode-pill svg{width:12px;height:12px}
@@ -201,18 +197,8 @@ html,body{height:100%;font-family:'Syne',sans-serif;-webkit-font-smoothing:antia
 /* ════════════════════════════════════
    BEAUTIFUL PAPER BLOCK
 ═══════════════════════════════════ */
-.paper-block{
-  margin:8px 0 6px;
-  border-radius:14px;
-  overflow:hidden;
-  box-shadow:0 12px 60px rgba(0,0,0,.5),0 4px 24px rgba(0,0,0,.3),0 0 0 1px rgba(255,255,255,.06);
-}
-.paper-toolbar{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:10px 16px;
-  background:linear-gradient(135deg,#1a1a2e 0%,#13132a 100%);
-  border-bottom:1px solid rgba(212,168,75,.15);
-}
+.paper-block{margin:6px 0;border-radius:0;overflow:visible;box-shadow:none}
+.paper-toolbar{display:none}
 .paper-toolbar-left{display:flex;align-items:center;gap:10px}
 .paper-type-badge{
   display:inline-flex;align-items:center;gap:6px;
@@ -230,11 +216,7 @@ html,body{height:100%;font-family:'Syne',sans-serif;-webkit-font-smoothing:antia
 .tb-btn:hover{background:rgba(255,255,255,.08);color:var(--text);border-color:var(--border-m)}
 
 /* Paper document itself */
-.paper-doc{
-  background:var(--paper-bg);
-  max-height:700px;overflow-y:auto;
-  scroll-behavior:smooth;
-}
+.paper-doc{background:transparent;max-height:none;overflow:visible;scroll-behavior:smooth}
 .paper-doc::-webkit-scrollbar{width:5px}
 .paper-doc::-webkit-scrollbar-track{background:rgba(0,0,0,.05)}
 .paper-doc::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2);border-radius:3px}
@@ -427,7 +409,7 @@ html,body{height:100%;font-family:'Syne',sans-serif;-webkit-font-smoothing:antia
 /* Input bar */
 .input-bar{
   padding:13px 28px 20px;border-top:1px solid var(--border);flex-shrink:0;
-  background:rgba(8,8,16,.92);backdrop-filter:blur(16px);
+  background:rgba(255,255,255,.95);backdrop-filter:blur(16px);
 }
 .input-inner{max-width:860px;margin:0 auto;position:relative}
 .file-chip-wrap{display:none;padding:0 2px 7px}
@@ -436,9 +418,9 @@ html,body{height:100%;font-family:'Syne',sans-serif;-webkit-font-smoothing:antia
 .file-chip button{background:none;border:none;cursor:pointer;color:var(--gold-lt);font-size:14px;padding:0;line-height:1;margin-left:2px}
 .input-box{
   display:flex;align-items:flex-end;gap:8px;
-  background:var(--bg2);border:1.5px solid var(--border);border-radius:13px;
+  background:#fff;border:1.5px solid var(--border);border-radius:13px;
   padding:10px 11px;transition:all .18s;
-  box-shadow:0 4px 28px rgba(0,0,0,.35)
+  box-shadow:0 6px 20px rgba(15,23,42,.08)
 }
 .input-box:focus-within{border-color:rgba(212,168,75,.45);box-shadow:0 0 0 3px rgba(212,168,75,.07),0 4px 28px rgba(0,0,0,.35)}
 .file-btn{width:32px;height:32px;flex-shrink:0;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-3);transition:color .15s;padding-bottom:2px}
@@ -545,7 +527,7 @@ textarea.ta::placeholder{color:var(--text-3);font-style:italic}
             <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
           </svg>
         </div>
-        <h2>Stremini Research Agent</h2>
+        <h2>Stremini Agent</h2>
         <p class="sub">Multi-agent pipeline: sources arXiv, Semantic Scholar &amp; the web, then reasons, critiques, and refines to produce structured research papers or step-by-step math solutions.</p>
         <div class="hint-grid">
           <div class="hint-card" onclick="hint('research','Explore the impact of large language models on scientific discovery and research')">
@@ -778,7 +760,7 @@ function parsePaperStructure(rawText) {
   // The backend outputs:
   //   [Full Title in Title Case]
   //   (blank)
-  //   Authors: AcademicHub Research Agent
+  //   Authors: Stremini Agent Research Agent
   //   Date: March 17, 2026
   //   ━━━━━━━…
   //   (blank)
