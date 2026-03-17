@@ -47,6 +47,18 @@ export default {
 
       const trimmedHistory = history.slice(-10);
 
+      if (mode === "research" && phase === "FULL") {
+        const pipelineResult = await runResearchPipeline({
+          env,
+          query,
+          history: trimmedHistory,
+          seedSearchResults: searchResults,
+          corsHeaders,
+        });
+
+        return new Response(JSON.stringify(pipelineResult), { headers: corsHeaders });
+      }
+
       // ── Shared diagram instructions ──
       const diagramInstructions = `
 DIAGRAMS — Embed Mermaid diagrams inline using this exact tag format:
@@ -229,7 +241,7 @@ ABSOLUTE RULES:
           userPrompt = `Context Data:\n${contextText}\n\nDraft Text to Verify:\n${draft_text}\n\nReturn the fully verified, corrected text now.`;
         }
 
-        // ── LEGACY SINGLE-SHOT RESEARCH MODE (Fallback) ──
+        // ── FALLBACK RESEARCH MODE (NON-PIPELINE PHASES) ──
         else {
           let liveSearchResults = [];
           if (env.SERPER_API_KEY) {
@@ -366,16 +378,6 @@ ABSOLUTE RULES:
         }
       }
 
-      if (mode === "research" && phase === "FULL") {
-        const paperMatch = aiMessage.match(/<paper>([\s\S]*?)(?:<\/paper>|$)/i);
-        if (paperMatch) {
-          const paperContent = paperMatch[1].trim();
-          const titleMatch = paperContent.match(/^(.+)/);
-          const title = titleMatch ? titleMatch[1].trim() : "Research Paper";
-          return new Response(JSON.stringify({ status: "PAPER", title, content: paperContent }), { headers: corsHeaders });
-        }
-      }
-
       // Plain text fallback (catches WRITE_SECTION, VERIFY, or missed tags)
       return new Response(JSON.stringify({
         status: "COMPLETED",
@@ -392,6 +394,283 @@ ABSOLUTE RULES:
 };
 
 // ── Helpers ──────────────────────────────────────────────────────────────────
+
+// ── Multi-Agent Research Pipeline ─────────────────────────────────────────────
+
+const MAX_ITERATIONS = 8;
+const CONFIDENCE_THRESHOLD = 0.85;
+
+async function runResearchPipeline({ env, query, history, seedSearchResults }) {
+  const roles = {
+    planner: "You are the Stremini Planner Agent. Create concise, high-value research plans.",
+    reasoner: "You are the Stremini Reasoner Agent. Build arguments from evidence only.",
+    critic: "You are the Stremini Adversarial Critic Agent. Assume the draft is wrong and find unsupported claims, weak logic, and contradictions.",
+    refiner: "You are the Stremini Refiner Agent. Fix issues raised by the critic while preserving evidence-grounded claims.",
+    writer: "You are the Stremini Writer Agent. Produce publication-quality, evidence-grounded output.",
+    verifier: "You are the Stremini Verifier Agent. Perform final claim-level validation and uncertainty disclosure.",
+  };
+
+  const plannerPrompt = `Return strict JSON only:
+{
+  "title": "...",
+  "sections": ["..."],
+  "search_queries": ["..."]
+}
+Topic: ${query}`;
+  const plannerRaw = await callAgent(env.MBZUAI_API_KEY, roles.planner, history, plannerPrompt, 0.2);
+  const plan = safeParsePlan(plannerRaw, query);
+
+  const evidence = await gatherMultiSourceEvidence(env, [query, ...(plan.search_queries || [])], seedSearchResults || []);
+  const sourceCatalog = buildSourceCatalog(evidence);
+
+  let iteration = 0;
+  let confidence = 0;
+  let reasonedDraft = "";
+  let claims = [];
+  let criticReport = "";
+
+  while (iteration < MAX_ITERATIONS && confidence < CONFIDENCE_THRESHOLD) {
+    const reasonerPrompt = [
+      `Topic: ${query}`,
+      `Plan title: ${plan.title}`,
+      `Sections: ${(plan.sections || []).join(" | ")}`,
+      "Write an evidence-grounded draft with explicit source tags like [S1], [S2].",
+      "If evidence is missing, label as UNVERIFIED.",
+      `Sources:
+${sourceCatalog}`,
+      criticReport ? `Address previous critic concerns:
+${criticReport}` : "",
+    ].filter(Boolean).join("
+
+");
+
+    reasonedDraft = await callAgent(env.MBZUAI_API_KEY, roles.reasoner, history, reasonerPrompt, 0.4);
+    claims = extractClaims(reasonedDraft);
+    const coverage = scoreClaimsCoverage(claims, evidence.length);
+
+    const criticPrompt = `Attack this draft. Return bullets for: unsupported claims, logical gaps, outdated assumptions, weak arguments.
+
+Draft:
+${reasonedDraft}
+
+Known source count: ${evidence.length}`;
+    criticReport = await callAgent(env.MBZUAI_API_KEY, roles.critic, history, criticPrompt, 0.2);
+
+    const contradictionPenalty = /(unsupported|contradiction|cannot verify|unverified)/i.test(criticReport) ? 0.18 : 0.05;
+    confidence = Math.max(0, Math.min(1, coverage - contradictionPenalty));
+
+    const refinerPrompt = `Refine the draft using critic feedback. Keep claims source-tagged. Unknown claims must be marked UNVERIFIED.
+
+Critic feedback:
+${criticReport}
+
+Draft:
+${reasonedDraft}`;
+    reasonedDraft = await callAgent(env.MBZUAI_API_KEY, roles.refiner, history, refinerPrompt, 0.35);
+
+    iteration += 1;
+
+    if (!/(unsupported|contradiction|cannot verify|unverified)/i.test(criticReport) && confidence >= 0.7) {
+      break;
+    }
+  }
+
+  const writerPrompt = `Create the final paper from the refined draft.
+- Every claim must include [Sx] source tags when supported.
+- If unsupported, mark UNVERIFIED.
+- Add a short section: Rejected Hypotheses.
+- Add a short section: Reasoning Tree Summary.
+
+Plan:
+${JSON.stringify(plan, null, 2)}
+
+Refined draft:
+${reasonedDraft}
+
+Sources:
+${sourceCatalog}`;
+  const writtenPaper = await callAgent(env.MBZUAI_API_KEY, roles.writer, history, writerPrompt, 0.45);
+
+  const verifierPrompt = `Validate this paper claim-by-claim against sources.
+Return improved text only. Preserve source tags and UNVERIFIED markers where needed.
+
+Paper:
+${writtenPaper}
+
+Sources:
+${sourceCatalog}`;
+  const verifiedPaper = await callAgent(env.MBZUAI_API_KEY, roles.verifier, history, verifierPrompt, 0.15);
+
+  const finalClaims = extractClaims(verifiedPaper);
+  const finalCoverage = scoreClaimsCoverage(finalClaims, evidence.length);
+  const finalConfidence = Math.max(confidence, finalCoverage);
+  const title = plan.title || query;
+
+  return {
+    status: "PAPER",
+    title,
+    content: verifiedPaper,
+    metadata: {
+      iterations: iteration,
+      confidence: Number((finalConfidence * 100).toFixed(1)),
+      sources: evidence,
+      claims: finalClaims,
+      thresholds: {
+        maxIterations: MAX_ITERATIONS,
+        confidenceTarget: CONFIDENCE_THRESHOLD,
+      },
+    },
+  };
+}
+
+async function callAgent(apiKey, rolePrompt, history, userPrompt, temperature) {
+  const response = await callAI(apiKey, rolePrompt, history, userPrompt, temperature);
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`Agent call failed (${response.status}): ${err}`);
+  }
+  const payload = await response.json();
+  return stripReasoning(payload.choices?.[0]?.message?.content ?? "");
+}
+
+function safeParsePlan(raw, query) {
+  try {
+    const cleaned = raw.replace(/```json/gi, "").replace(/```/g, "").trim();
+    const parsed = JSON.parse(cleaned);
+    return {
+      title: parsed.title || `Research: ${query}`,
+      sections: Array.isArray(parsed.sections) && parsed.sections.length ? parsed.sections : ["Introduction", "Analysis", "Conclusion"],
+      search_queries: Array.isArray(parsed.search_queries) && parsed.search_queries.length ? parsed.search_queries : [query],
+    };
+  } catch {
+    return {
+      title: `Research: ${query}`,
+      sections: ["Introduction", "Literature Review", "Analysis", "Conclusion"],
+      search_queries: [query],
+    };
+  }
+}
+
+async function gatherMultiSourceEvidence(env, queries, seedSearchResults = []) {
+  const q = [...new Set(queries.filter(Boolean))].slice(0, 5);
+  const bundles = await Promise.all(q.map(async (query) => {
+    const tasks = [
+      env.SERPER_API_KEY ? fetchSerperResults(env.SERPER_API_KEY, query, 5).catch(() => []) : Promise.resolve([]),
+      fetchArxivResults(query, 4).catch(() => []),
+      fetchSemanticScholarResults(query, 4).catch(() => []),
+      fetchCrossrefResults(query, 4).catch(() => []),
+      fetchWikipediaResults(query, 2).catch(() => []),
+    ];
+
+    const [serper, arxiv, semantic, crossref, wikipedia] = await Promise.all(tasks);
+    return [...serper, ...arxiv, ...semantic, ...crossref, ...wikipedia].map((item) => ({ ...item, query }));
+  }));
+
+  const merged = [...seedSearchResults, ...bundles.flat()]
+    .filter((r) => r && (r.url || r.title || r.snippet))
+    .map((r) => ({
+      source: r.source || "web",
+      title: r.title || "Untitled",
+      url: r.url || "",
+      snippet: r.snippet || "",
+      query: r.query || q[0] || "",
+      year: r.year || "",
+    }));
+
+  const seen = new Set();
+  return merged.filter((item) => {
+    const key = `${item.title}|${item.url}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).slice(0, 30);
+}
+
+function buildSourceCatalog(sources) {
+  return sources.map((s, i) => `[S${i + 1}] (${s.source}) ${s.title}${s.year ? ` (${s.year})` : ""}
+URL: ${s.url}
+Snippet: ${s.snippet}`).join("
+
+");
+}
+
+function extractClaims(text) {
+  return text
+    .split(/(?<=[.!?])\s+/)
+    .map((sentence) => sentence.trim())
+    .filter((sentence) => sentence.length > 40)
+    .map((statement) => {
+      const sourceMatches = [...statement.matchAll(/\[S(\d+)\]/g)].map((m) => Number(m[1]));
+      const hasUnverified = /UNVERIFIED/i.test(statement);
+      const confidence = sourceMatches.length > 0 ? 0.85 : (hasUnverified ? 0.25 : 0.4);
+      return { statement, source: sourceMatches, confidence };
+    });
+}
+
+function scoreClaimsCoverage(claims, sourceCount) {
+  if (!claims.length) return 0;
+  const covered = claims.filter((c) => c.source.length > 0).length;
+  const rawCoverage = covered / claims.length;
+  const sourceDiversity = Math.min(1, sourceCount / 12);
+  return (rawCoverage * 0.8) + (sourceDiversity * 0.2);
+}
+
+async function fetchArxivResults(query, limit = 5) {
+  const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=${limit}`;
+  const res = await fetch(url, { headers: { "User-Agent": "StreminiResearchAgent/1.0" } });
+  if (!res.ok) throw new Error("arXiv request failed");
+  const xml = await res.text();
+  const entries = [...xml.matchAll(/<entry>[\s\S]*?<\/entry>/g)].slice(0, limit).map((m) => m[0]);
+  return entries.map((entry) => {
+    const title = (entry.match(/<title>([\s\S]*?)<\/title>/)?.[1] || "").replace(/\s+/g, " ").trim();
+    const link = entry.match(/<id>([\s\S]*?)<\/id>/)?.[1]?.trim() || "";
+    const summary = (entry.match(/<summary>([\s\S]*?)<\/summary>/)?.[1] || "").replace(/\s+/g, " ").trim();
+    const year = entry.match(/<published>(\d{4})-/)?.[1] || "";
+    return { source: "arxiv", title, url: link, snippet: summary, year };
+  });
+}
+
+async function fetchSemanticScholarResults(query, limit = 5) {
+  const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=${limit}&fields=title,year,abstract,url`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error("Semantic Scholar request failed");
+  const data = await res.json();
+  return (data.data || []).map((item) => ({
+    source: "semantic_scholar",
+    title: item.title || "",
+    url: item.url || "",
+    snippet: item.abstract || "",
+    year: item.year || "",
+  }));
+}
+
+async function fetchCrossrefResults(query, limit = 5) {
+  const url = `https://api.crossref.org/works?rows=${limit}&query.title=${encodeURIComponent(query)}`;
+  const res = await fetch(url, { headers: { "User-Agent": "StreminiResearchAgent/1.0 (mailto:research@example.com)" } });
+  if (!res.ok) throw new Error("CrossRef request failed");
+  const data = await res.json();
+  return (data.message?.items || []).slice(0, limit).map((item) => ({
+    source: "crossref",
+    title: Array.isArray(item.title) ? (item.title[0] || "") : "",
+    url: item.URL || "",
+    snippet: Array.isArray(item.subject) ? item.subject.join(", ") : "CrossRef indexed work",
+    year: item.published?.['date-parts']?.[0]?.[0] || "",
+  }));
+}
+
+async function fetchWikipediaResults(query, limit = 3) {
+  const searchUrl = `https://en.wikipedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srlimit=${limit}&format=json&utf8=1&origin=*`;
+  const res = await fetch(searchUrl);
+  if (!res.ok) throw new Error("Wikipedia request failed");
+  const data = await res.json();
+  return (data.query?.search || []).slice(0, limit).map((item) => ({
+    source: "wikipedia",
+    title: item.title || "",
+    url: `https://en.wikipedia.org/wiki/${encodeURIComponent((item.title || "").replace(/\s+/g, "_"))}`,
+    snippet: (item.snippet || "").replace(/<[^>]+>/g, ""),
+    year: "",
+  }));
+}
 
 async function fetchSerperResults(serperApiKey, query, numResults = 10) {
   const response = await fetch("https://google.serper.dev/search", {
