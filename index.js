@@ -440,9 +440,7 @@ Topic: ${query}`;
 ${sourceCatalog}`,
       criticReport ? `Address previous critic concerns:
 ${criticReport}` : "",
-    ].filter(Boolean).join("
-
-");
+    ].filter(Boolean).join("\n\n");
 
     reasonedDraft = await callAgent(env.MBZUAI_API_KEY, roles.reasoner, history, reasonerPrompt, 0.4);
     claims = extractClaims(reasonedDraft);
