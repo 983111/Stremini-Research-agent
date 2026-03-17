@@ -840,6 +840,7 @@ function parsePaperStructure(rawText) {
 
   for (; i < lines.length; i++) {
     const l = lines[i];
+    const headingLine = l.replace(/^#{1,6}\s+/, '').trim();
 
     // Blank line → paragraph break
     if (!l) { flushPara(); continue; }
@@ -850,7 +851,7 @@ function parsePaperStructure(rawText) {
     // ── Section-type detectors ──
 
     // REFERENCES (standalone label)
-    if (/^references\s*$/i.test(l)) {
+    if (/^references\s*:?$/i.test(headingLine)) {
       flushPara(); mode = 'refs';
       currentSection = null; currentSubSection = null;
       continue;
@@ -861,22 +862,22 @@ function parsePaperStructure(rawText) {
     }
 
     // REJECTED HYPOTHESES
-    if (/^rejected hypotheses?\s*$/i.test(l)) {
+    if (/^rejected hypotheses?\s*:?$/i.test(headingLine)) {
       flushPara(); mode = 'rejected'; continue;
     }
 
     // UNCERTAINTY DISCLOSURE
-    if (/^uncertainty disclosure\s*$/i.test(l)) {
+    if (/^uncertainty disclosure\s*:?$/i.test(headingLine)) {
       flushPara(); mode = 'uncertainty'; continue;
     }
 
     // BIAS ASSESSMENT
-    if (/^bias assessment\s*$/i.test(l)) {
+    if (/^bias assessment\s*:?$/i.test(headingLine)) {
       flushPara(); mode = 'bias'; continue;
     }
 
     // ABSTRACT (standalone label OR "ABSTRACT\n text")
-    if (/^abstract\s*$/i.test(l)) {
+    if (/^abstract\s*:?$/i.test(headingLine)) {
       flushPara(); mode = 'abstract';
       currentSection = null; currentSubSection = null;
       continue;
@@ -891,7 +892,7 @@ function parsePaperStructure(rawText) {
 
     // Numbered MAJOR section: "1. INTRODUCTION" / "1. Introduction"
     // Must start with digit(s) followed by dot and space
-    const mjMatch = /^(\d+)\.\s+(.+)$/.exec(l);
+    const mjMatch = /^(\d+)\.\s+(.+)$/.exec(headingLine);
     if (mjMatch && !/^\d+\.\d+/.test(l)) { // not a sub-section
       flushPara();
       mode = 'section';
@@ -903,6 +904,24 @@ function parsePaperStructure(rawText) {
       };
       currentSubSection = null;
       result.sections.push(currentSection);
+      continue;
+    }
+
+    // Markdown/plain-text major section headings without numbering.
+    const plainHeadingMatch = /^(introduction|literature review|background|methodology|methods|analysis(?: and discussion)?|discussion|findings|results|conclusion|conclusions)\b:?\s*(.*)$/i.exec(headingLine);
+    if (plainHeadingMatch) {
+      flushPara();
+      mode = 'section';
+      currentSection = {
+        num: String(result.sections.length + 1),
+        heading: plainHeadingMatch[1].replace(/\b\w/g, c => c.toUpperCase()),
+        paragraphs: [],
+        subSections: []
+      };
+      currentSubSection = null;
+      result.sections.push(currentSection);
+      const inlineText = plainHeadingMatch[2].trim();
+      if (inlineText) paraBuffer.push(inlineText);
       continue;
     }
 
@@ -923,9 +942,16 @@ function parsePaperStructure(rawText) {
   flushPara();
 
   // ── Fallback: if no sections were parsed but we have content, treat everything as one section ──
-  if (result.sections.length === 0 && result.abstract.length === 0) {
-    // Dump all remaining lines as a single "Content" section
-    const allText = text.replace(/^[^\n]*\n/, '').trim(); // skip title line
+  if (result.sections.length === 0) {
+    // Dump meaningful non-metadata lines as a single section to prevent blank renders.
+    const fallbackLines = lines.filter(l =>
+      l &&
+      !/^#{1,6}\s*$/.test(l) &&
+      !/^(authors?|date|keywords?)\s*:/i.test(l) &&
+      !/^(abstract|references|rejected hypotheses?|uncertainty disclosure|bias assessment)\s*:?$/i.test(l) &&
+      !/^[━─=\-─]{3,}$/.test(l)
+    );
+    const allText = fallbackLines.join('\n').trim();
     if (allText) {
       result.sections.push({
         num: '', heading: 'Content', paragraphs: [allText], subSections: []
