@@ -827,18 +827,23 @@ async function callAI(apiKey, systemPrompt, history, userQuery, temperature = 0.
 function stripReasoning(raw) {
   let out = raw.replace(/<think>[\s\S]*?<\/think>/gi, "");
   if (out.includes("</think>")) out = out.split("</think>").pop();
+  out = out.trim();
 
-  const lastPaperIdx = out.lastIndexOf("<paper");
-  const lastSolutionIdx = out.lastIndexOf("<solution");
-  const actionIdx = Math.max(lastPaperIdx, lastSolutionIdx);
-  if (actionIdx !== -1) return out.slice(actionIdx).trim();
-
-  const paragraphs = out.split(/\n{2,}/).map(p => p.trim()).filter(p => p.length > 0);
-  for (let i = paragraphs.length - 1; i >= 0; i--) {
-    if (paragraphs[i].length <= 1200 && !paragraphs[i].includes("{")) return paragraphs[i];
+  const firstPaperIdx = out.indexOf("<paper");
+  const firstSolutionIdx = out.indexOf("<solution");
+  const validIdx = [firstPaperIdx, firstSolutionIdx].filter(i => i >= 0);
+  if (validIdx.length > 0) {
+    return out.slice(Math.min(...validIdx)).trim();
   }
-  const lines = out.split("\n").map(l => l.trim()).filter(l => l);
-  return (lines[lines.length - 1] ?? "").trim();
+
+  // Preserve strict JSON payloads for planner / tool-style phases.
+  const jsonMatch = out.match(/\{[\s\S]*\}|\[[\s\S]*\]/);
+  if (jsonMatch) return jsonMatch[0].trim();
+
+  // Fallback: return the full assistant content instead of the last paragraph.
+  // Returning only the tail often drops the research body and keeps metadata lines
+  // (e.g., confidence summaries), which breaks final paper output.
+  return out;
 }
 
 function safeParsePlan(raw, query) {
