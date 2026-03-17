@@ -445,6 +445,7 @@ mermaid.initialize({startOnLoad:false,theme:'neutral',securityLevel:'loose',font
 // ── State ──
 let mode='research',running=false,history=[];
 let papers=0,mathSolved=0,diagramsTotal=0,diagId=0;
+const API_ENDPOINT=(window.STREMINI_API_URL||'https://agentic-research.vishwajeetadkine705.workers.dev').replace(/\/$/, '');
 
 const ta=document.getElementById('ta');
 const sendBtn=document.getElementById('sendBtn');
@@ -513,6 +514,31 @@ function card(type,text){
   const cls={ok:'card-ok',work:'card-work',math:'card-math',err:'card-err'};
   const icons={ok:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`,work:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,math:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>`,err:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`};
   return`<div class="card ${cls[type]||'card-ok'}">${icons[type]||''} ${text}</div>`;
+}
+
+async function requestAgent(queryText){
+  const payload={
+    query:queryText,
+    mode,
+    phase:'FULL',
+    history,
+    searchResults:[]
+  };
+
+  const response=await fetch(API_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
+  let data={};
+  try{data=await response.json()}catch(_){/* ignored */}
+
+  if(!response.ok){
+    const errText=data?.message||`Request failed with status ${response.status}`;
+    throw new Error(errText);
+  }
+  if(data.status==='ERROR')throw new Error(data.message||'Agent request failed');
+
+  if(mode==='math'){
+    return (data.content||data.solution||'').trim();
+  }
+  return (data.content||data.solution||'').trim();
 }
 
 // ══════════════════════════════════════════════════════
@@ -1169,12 +1195,13 @@ async function handleSend(){
   running=true;sendBtn.disabled=true;
   setStatus('run',mode==='math'?'Solving…':'Researching…');
   addThinking();
+  const isMath=mode==='math';
 
-  setTimeout(async()=>{
+  try{
+    const content=await requestAgent(finalQuery);
+    if(!content)throw new Error('Agent returned empty content');
+
     removeThinking();
-    const isMath=mode==='math';
-    const content=isMath?getMathDemo(q):getResearchDemo(q);
-
     hideWelcome();
     const row=document.createElement('div');row.className='msg-row';
     row.innerHTML=`<div class="av av-agent"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div><div class="msg-body"><div class="msg-who">Stremini Agent <span class="msg-time">${now()}</span></div><div class="msg-content" id="agSlot"></div></div>`;
@@ -1191,9 +1218,14 @@ async function handleSend(){
     if(isMath){mathSolved++;setStatus('done','Solved')}
     else{papers++;diagramsTotal+=diagramsFound;setStatus('done','Paper Ready')}
     updateStats();
-    history.push({role:'assistant',content:'Generated'});
+    history.push({role:'assistant',content});
+  }catch(err){
+    removeThinking();
+    addMsg('agent',`${card('err','Request failed')}<div class="paper">${esc(err.message||'Unknown error')}</div>`);
+    setStatus('err','Error');
+  }finally{
     running=false;sendBtn.disabled=false;
-  },2200);
+  }
 }
 
 // ── Clear ──
