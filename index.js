@@ -585,11 +585,11 @@ async function gatherMultiSourceEvidence(env, queries, seedSearchResults = []) {
 }
 
 function buildSourceCatalog(sources) {
-  return sources.map((s, i) => `[S${i + 1}] (${s.source}) ${s.title}${s.year ? ` (${s.year})` : ""}
+  return sources
+    .map((s, i) => `[S${i + 1}] (${s.source}) ${s.title}${s.year ? ` (${s.year})` : ""}
 URL: ${s.url}
-Snippet: ${s.snippet}`).join("
-
-");
+Snippet: ${s.snippet}`)
+    .join("\n\n");
 }
 
 function extractClaims(text) {
