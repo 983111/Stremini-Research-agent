@@ -1,5 +1,5 @@
 // ╔══════════════════════════════════════════════════════════════════════════════╗
-// ║          AcademicHub — Elite Multi-Agent Research Copilot                  ║
+// ║          Stremini Agent — Elite Multi-Agent Research Copilot                  ║
 // ║          9-Role Pipeline | Anti-Hallucination Core | v3.1                 ║
 // ║  Subrequest budget per FULL run:                                           ║
 // ║    Evidence : 2 queries × 3 sources          =  6 fetches                 ║
@@ -22,7 +22,7 @@ export default {
     if (request.method === "GET") {
       return new Response(JSON.stringify({
         status: "OK",
-        message: "AcademicHub Multi-Agent Research Worker v3.1 is running.",
+        message: "Stremini Agent Multi-Agent Research Worker v3.1 is running.",
         agents: 9,
         features: ["anti-hallucination", "multi-source-evidence", "iterative-critique", "confidence-scoring", "cf-subrequest-optimised"],
       }), { headers: corsHeaders });
@@ -134,14 +134,14 @@ Diagram rules:
 
       let systemPrompt = "";
       let userPrompt = query;
-      let aiTemperature = 0.7;
+      let aiTemperature = 0.8;
 
       // ════════════════════════════════════════════════════════════════════════
       // MATH MODE — single AI call
       // ════════════════════════════════════════════════════════════════════════
       if (mode === "math") {
         aiTemperature = 0.2;
-        systemPrompt = `You are AcademicHub's Mathematics Expert Agent. Solve problems with complete rigour, showing every intermediate step. You may include Mermaid diagrams to illustrate proof structure or algorithm flow.
+        systemPrompt = `You are Stremini Agent's Mathematics Expert Agent. Solve problems with complete rigour, showing every intermediate step. You may include Mermaid diagrams to illustrate proof structure or algorithm flow.
 ${diagramInstructions}
 OUTPUT — wrap everything in <solution></solution> tags:
 
@@ -193,13 +193,13 @@ RULES:
         // ── PLAN phase: 1 AI call ──
         if (phase === "PLAN") {
           aiTemperature = 0.2;
-          systemPrompt = `You are the AcademicHub Commander Agent. Analyze the research topic and output strict JSON only. No markdown, no preamble.
+          systemPrompt = `You are the Stremini Agent Commander Agent. Analyze the research topic and output strict JSON only. No markdown, no preamble.
 Format:
 {
   "title": "Proposed Academic Paper Title",
   "thesis": "One-sentence core thesis or research question",
   "sections": ["Introduction", "Literature Review", "Methodology", "Analysis: [Subtopic]", "Findings", "Conclusion"],
-  "search_queries": ["targeted query 1", "targeted query 2"],
+  "search_queries": ["targeted query 1", "targeted query 2", "targeted query 3", "targeted query 4"],
   "key_concepts": ["concept1", "concept2", "concept3"],
   "potential_controversies": ["controversy or debate 1"],
   "out_of_scope": ["what this paper will NOT cover"]
@@ -232,7 +232,7 @@ Format:
             ? `\n\nSOURCE EVIDENCE:\n${allResults.map((r, i) => `[${i + 1}] (${r.source || "web"}) ${r.title}\nURL: ${r.url}\nSnippet: ${r.snippet}${r.year ? ` (${r.year})` : ""}`).join("\n\n")}`
             : "No active search results. Synthesise from internal knowledge and mark uncertain claims [NEEDS VERIFICATION].";
 
-          systemPrompt = `You are the AcademicHub Writer Agent. Write ONE comprehensive, publication-quality section of an academic paper.
+          systemPrompt = `You are the Stremini Agent Writer Agent. Write ONE comprehensive, publication-quality section of an academic paper.
 Rules:
 - Formal, rigorous academic tone throughout.
 - Ground every factual claim in provided sources. Cite as [1], [2], etc.
@@ -248,7 +248,7 @@ ${diagramInstructions}
         // ── VERIFY phase: 1 AI call ──
         else if (phase === "VERIFY") {
           aiTemperature = 0.1;
-          systemPrompt = `You are the AcademicHub Verification Agent. Eliminate hallucinations and ensure every claim is grounded.
+          systemPrompt = `You are the Stremini Agent Verification Agent. Eliminate hallucinations and ensure every claim is grounded.
 
 Process:
 1. Extract all verifiable claims from the draft text.
@@ -265,7 +265,7 @@ Process:
         // ── GAP_ANALYSIS phase: 1 AI call ──
         else if (phase === "GAP_ANALYSIS") {
           aiTemperature = 0.3;
-          systemPrompt = `You are the AcademicHub Gap Analysis Agent. Identify research gaps, contradictions, and missing perspectives.
+          systemPrompt = `You are the Stremini Agent Gap Analysis Agent. Identify research gaps, contradictions, and missing perspectives.
 
 Output a structured gap analysis:
 1. IDENTIFIED GAPS — what the current literature/draft does not address
@@ -279,7 +279,7 @@ Output a structured gap analysis:
         // ── FORMAT_CITATIONS phase: 1 AI call ──
         else if (phase === "FORMAT_CITATIONS") {
           aiTemperature = 0.1;
-          systemPrompt = `You are the AcademicHub Citation Formatter Agent. Format all references to APA 7th edition.
+          systemPrompt = `You are the Stremini Agent Citation Formatter Agent. Format all references to APA 7th edition.
 Rules:
 - Author, A. A., & Author, B. B. (Year). Title of article. Journal Name, Volume(Issue), pages. https://doi.org/xxx
 - For books: Author, A. A. (Year). Title of work: Capital letter also for subtitle. Publisher.
@@ -309,7 +309,7 @@ Output ONLY the reformatted reference list.`;
             ? `\n\nSOURCE EVIDENCE (cite as [1], [2], etc.):\n${allResults.map((r, i) => `[${i + 1}] (${r.source || "web"}) ${r.title}\nURL: ${r.url}\nSnippet: ${r.snippet}`).join("\n\n")}`
             : "";
 
-          systemPrompt = `You are AcademicHub's Elite Research Writer. Produce a complete, publication-quality academic paper grounded in evidence. Never fabricate citations, statistics, or author names.
+          systemPrompt = `You are Stremini Agent's Elite Research Writer. Produce a complete, publication-quality academic paper grounded in evidence. Never fabricate citations, statistics, or author names.
 ${diagramInstructions}
 - Each paper must include at least 3 diagrams.
 - Mark any unverifiable claim [NEEDS VERIFICATION].
@@ -395,19 +395,19 @@ RULES:
 //   Removed callAI fallback retry (saves up to N calls on failure)
 // ════════════════════════════════════════════════════════════════════════════════
 
-const MAX_ITERATIONS = 2;
+const MAX_ITERATIONS = 3;
 const CONFIDENCE_THRESHOLD = 0.80;
 
 // 9 composite agent role definitions
 const AGENT_ROLES = {
   // CALL 1: Commander + scope guard merged
-  commander: `You are the AcademicHub Commander & Scope Guard. In ONE response:
+  commander: `You are the Stremini Agent Commander & Scope Guard. In ONE response:
 1. Create a precise, scoped research plan as strict JSON (no markdown fences).
 2. Immediately review it for scope creep and apply corrections inside the same JSON.
 Never over-promise coverage. Flag what is explicitly OUT of scope.`,
 
   // CALL 2 per iteration: Reason from evidence
-  reasoner: `You are the AcademicHub Reasoner Agent. Build rigorous arguments from evidence only.
+  reasoner: `You are the Stremini Agent Reasoner Agent. Build rigorous arguments from evidence only.
 - Tag EVERY claim with its source: [S1], [S2], etc.
 - Label claims with no source [UNVERIFIED].
 - Do NOT fabricate statistics, names, dates, or citations.
@@ -415,13 +415,13 @@ Never over-promise coverage. Flag what is explicitly OUT of scope.`,
 - Map each source to the section it best supports before writing.`,
 
   // CALL 3 per iteration: Adversarial critic + hypothesis tester merged
-  criticCombo: `You are the AcademicHub Adversarial Critic & Hypothesis Tester.
+  criticCombo: `You are the Stremini Agent Adversarial Critic & Hypothesis Tester.
 PART A — HYPOTHESIS ATTACK: List 3–5 alternative explanations or null hypotheses that could invalidate the draft's central claims.
 PART B — CRITIQUE: For each problem found, output a bullet with: type (unsupported|logical-gap|outdated|contradiction|bias), the claim quoted, and the reason.
 Be aggressive. Assume the draft contains errors. Prioritise factual issues over stylistic ones.`,
 
   // CALL 4 per iteration: Refiner applies all feedback
-  refiner: `You are the AcademicHub Refiner Agent. Apply ALL critic feedback.
+  refiner: `You are the Stremini Agent Refiner Agent. Apply ALL critic feedback.
 - Keep every claim that has a valid [Sx] source tag.
 - Soften or rewrite claims flagged as unsupported — use hedge language (suggests, indicates, may).
 - Mark truly unresolvable claims [UNVERIFIED].
@@ -429,13 +429,13 @@ Be aggressive. Assume the draft contains errors. Prioritise factual issues over 
 - Output the improved draft only — no commentary.`,
 
   // CALL 5 (once): Bias + structure QA merged
-  qaCombo: `You are the AcademicHub QA Agent combining Bias Detection + Structure Review.
+  qaCombo: `You are the Stremini Agent QA Agent combining Bias Detection + Structure Review.
 PART A — BIAS REPORT: Identify confirmation bias, cherry-picking, ideological framing, or missing counterevidence. Be specific — name which claims are affected.
 PART B — STRUCTURE REVIEW: Does each section logically follow from the previous? Do claims build toward the thesis? List specific structural gaps or non-sequiturs.
 Output both parts clearly labelled.`,
 
   // CALL 6 (once): Final writer + verifier in one pass
-  finalWriter: `You are the AcademicHub Final Writer & Verifier. In ONE pass:
+  finalWriter: `You are the Stremini Agent Final Writer & Verifier. In ONE pass:
 1. Transform the refined draft into complete, publication-quality academic prose.
 2. While writing, verify every claim against the source catalog — preserve [Sx] tags, soften any remaining unsupported claims.
 3. Include these mandatory sections: "Rejected Hypotheses", "Uncertainty Disclosure", "Bias Assessment".
@@ -452,7 +452,7 @@ async function runResearchPipeline({ env, query, history, seedSearchResults }) {
   "title": "...",
   "thesis": "One-sentence core research question or thesis",
   "sections": ["Introduction", "Literature Review", "Methodology", "Analysis", "Findings", "Conclusion"],
-  "search_queries": ["query1", "query2"],
+  "search_queries": ["query1", "query2", "query3"],
   "key_concepts": ["concept1", "concept2"],
   "potential_controversies": ["debate1"],
   "out_of_scope": ["what this paper will NOT cover"]
@@ -545,34 +545,34 @@ Output format — wrap everything in <paper></paper>:
 <paper>
 [Full Title in Title Case]
 
-Authors: AcademicHub Research Agent
+Authors: Stremini Agent Research Agent
 Date: ${new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 ABSTRACT
-[200 words — real prose covering: what is investigated, why it matters, approach, key findings, implications]
+[300+ words — real prose covering: what is investigated, why it matters, approach, key findings, implications]
 
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 1. INTRODUCTION
-[4 paragraphs: background, problem/gap, objectives, paper structure. Cite sources.]
+[5 paragraphs: background, problem/gap, objectives, paper structure, and significance. Cite sources.]
 [Insert mindmap or flowchart diagram here]
 
 2. LITERATURE REVIEW
-[4 paragraphs: foundational work, competing theories, gaps, contradictions. Cite [S1],[S2] etc.]
+[5 paragraphs: foundational work, competing theories, gaps, contradictions, and synthesis. Cite [S1],[S2] etc.]
 [Insert timeline or graph diagram here]
 
 3. METHODOLOGY / THEORETICAL FRAMEWORK
-[3 paragraphs: approach, lens, justification]
+[4 paragraphs: approach, lens, justification, and limitations]
 [Insert flowchart diagram here]
 
 4. ANALYSIS AND DISCUSSION
 4.1 [Real sub-section title]
-[3 paragraphs of evidence-grounded analysis]
+[4 paragraphs of evidence-grounded analysis]
 
 4.2 [Real sub-section title]
-[3 paragraphs]
+[4 paragraphs]
 [Insert diagram if relevant]
 
 4.3 [Real sub-section title]
@@ -639,12 +639,12 @@ REFERENCES
 }
 
 // ════════════════════════════════════════════════════════════════════════════════
-// EVIDENCE GATHERING — 2 queries × 3 sources = 6 fetch calls max
+// EVIDENCE GATHERING — up to 4 queries × 3 sources for broader coverage
 // ════════════════════════════════════════════════════════════════════════════════
 
 async function gatherMultiSourceEvidence(env, queries, seedSearchResults = []) {
-  // Hard cap: 2 queries to stay within subrequest budget
-  const q = [...new Set(queries.filter(Boolean))].slice(0, 2);
+  // Expanded cap: 4 queries to increase research breadth
+  const q = [...new Set(queries.filter(Boolean))].slice(0, 4);
 
   const bundles = await Promise.all(q.map(async (query) => {
     // 3 fetch calls per query: arXiv + Semantic Scholar + Serper
@@ -720,7 +720,7 @@ function scoreClaimsCoverage(claims, sourceCount) {
 
 async function fetchArxivResults(query, limit = 5) {
   const url = `https://export.arxiv.org/api/query?search_query=all:${encodeURIComponent(query)}&start=0&max_results=${limit}&sortBy=relevance`;
-  const res = await fetch(url, { headers: { "User-Agent": "AcademicHub/3.1" } });
+  const res = await fetch(url, { headers: { "User-Agent": "Stremini Agent/3.1" } });
   if (!res.ok) throw new Error("arXiv request failed");
   const xml = await res.text();
   const entries = [...xml.matchAll(/<entry>[\s\S]*?<\/entry>/g)].slice(0, limit).map(m => m[0]);
@@ -735,7 +735,7 @@ async function fetchArxivResults(query, limit = 5) {
 
 async function fetchSemanticScholarResults(query, limit = 5) {
   const url = `https://api.semanticscholar.org/graph/v1/paper/search?query=${encodeURIComponent(query)}&limit=${limit}&fields=title,year,abstract,url,authors,citationCount`;
-  const res = await fetch(url, { headers: { "User-Agent": "AcademicHub/3.1" } });
+  const res = await fetch(url, { headers: { "User-Agent": "Stremini Agent/3.1" } });
   if (!res.ok) throw new Error("Semantic Scholar request failed");
   const data = await res.json();
   return (data.data || []).map(item => ({
@@ -802,7 +802,7 @@ async function callAgent(apiKey, rolePrompt, history, userPrompt, temperature) {
   return stripReasoning(payload.choices?.[0]?.message?.content ?? "");
 }
 
-async function callAI(apiKey, systemPrompt, history, userQuery, temperature = 0.7) {
+async function callAI(apiKey, systemPrompt, history, userQuery, temperature = 0.8) {
   // Single model, single fetch call — no fallback retry (would double subrequests)
   const res = await fetch("https://api.k2think.ai/v1/chat/completions", {
     method: "POST",
@@ -855,7 +855,7 @@ function safeParsePlan(raw, query) {
       title: parsed.title || `Research: ${query}`,
       thesis: parsed.thesis || "",
       sections: Array.isArray(parsed.sections) && parsed.sections.length ? parsed.sections : ["Introduction", "Analysis", "Conclusion"],
-      search_queries: Array.isArray(parsed.search_queries) && parsed.search_queries.length ? parsed.search_queries.slice(0, 2) : [query],
+      search_queries: Array.isArray(parsed.search_queries) && parsed.search_queries.length ? parsed.search_queries.slice(0, 4) : [query],
       key_concepts: Array.isArray(parsed.key_concepts) ? parsed.key_concepts : [],
       potential_controversies: Array.isArray(parsed.potential_controversies) ? parsed.potential_controversies : [],
       out_of_scope: Array.isArray(parsed.out_of_scope) ? parsed.out_of_scope : [],
