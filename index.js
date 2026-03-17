@@ -397,7 +397,7 @@ ABSOLUTE RULES:
 
 // ── Multi-Agent Research Pipeline ─────────────────────────────────────────────
 
-const MAX_ITERATIONS = 8;
+const MAX_ITERATIONS = 4;
 const CONFIDENCE_THRESHOLD = 0.85;
 
 async function runResearchPipeline({ env, query, history, seedSearchResults }) {
@@ -550,18 +550,16 @@ function safeParsePlan(raw, query) {
 }
 
 async function gatherMultiSourceEvidence(env, queries, seedSearchResults = []) {
-  const q = [...new Set(queries.filter(Boolean))].slice(0, 5);
+  const q = [...new Set(queries.filter(Boolean))].slice(0, 3);
   const bundles = await Promise.all(q.map(async (query) => {
     const tasks = [
-      env.SERPER_API_KEY ? fetchSerperResults(env.SERPER_API_KEY, query, 5).catch(() => []) : Promise.resolve([]),
-      fetchArxivResults(query, 4).catch(() => []),
-      fetchSemanticScholarResults(query, 4).catch(() => []),
-      fetchCrossrefResults(query, 4).catch(() => []),
-      fetchWikipediaResults(query, 2).catch(() => []),
+      env.SERPER_API_KEY ? fetchSerperResults(env.SERPER_API_KEY, query, 4).catch(() => []) : Promise.resolve([]),
+      fetchArxivResults(query, 3).catch(() => []),
+      fetchSemanticScholarResults(query, 3).catch(() => []),
     ];
 
-    const [serper, arxiv, semantic, crossref, wikipedia] = await Promise.all(tasks);
-    return [...serper, ...arxiv, ...semantic, ...crossref, ...wikipedia].map((item) => ({ ...item, query }));
+    const [serper, arxiv, semantic] = await Promise.all(tasks);
+    return [...serper, ...arxiv, ...semantic].map((item) => ({ ...item, query }));
   }));
 
   const merged = [...seedSearchResults, ...bundles.flat()]
@@ -581,7 +579,7 @@ async function gatherMultiSourceEvidence(env, queries, seedSearchResults = []) {
     if (seen.has(key)) return false;
     seen.add(key);
     return true;
-  }).slice(0, 30);
+  }).slice(0, 20);
 }
 
 function buildSourceCatalog(sources) {
