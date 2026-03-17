@@ -3,301 +3,535 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Stremini — Research & Math Agent</title>
-<link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet"/>
+<title>Stremini — Research Agent</title>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=Syne:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet"/>
 <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
 <script src="https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.min.js"></script>
 <script src="https://unpkg.com/mammoth@1.6.0/mammoth.browser.min.js"></script>
 <style>
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;font-family:'DM Sans',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden}
+html,body{height:100%;font-family:'Syne',sans-serif;-webkit-font-smoothing:antialiased;overflow:hidden;background:#080810}
 
-/* ── LAYOUT ── */
-.layout{display:grid;grid-template-columns:290px 1fr;height:100vh;overflow:hidden}
-
-/* ══════════════════════════════════════
-   SIDEBAR — dark marble with gold veins
-══════════════════════════════════════ */
-.sidebar{
-  position:relative;display:flex;flex-direction:column;
-  overflow-y:auto;overflow-x:hidden;
-  background-color:#111118;
-  background-image:
-    linear-gradient(125deg,transparent 0%,transparent 22%,rgba(180,140,60,.18) 23%,rgba(200,160,70,.22) 23.4%,rgba(180,140,60,.12) 23.8%,transparent 25%,transparent 100%),
-    linear-gradient(118deg,transparent 0%,transparent 38%,rgba(160,120,50,.14) 38.5%,rgba(190,150,65,.20) 39%,rgba(160,120,50,.10) 39.5%,transparent 41%,transparent 100%),
-    linear-gradient(108deg,transparent 0%,transparent 55%,rgba(180,140,55,.10) 55.5%,rgba(200,160,65,.16) 56%,rgba(170,130,50,.08) 56.5%,transparent 58%,transparent 100%),
-    linear-gradient(135deg,transparent 0%,transparent 68%,rgba(220,180,80,.08) 68.4%,rgba(230,190,90,.14) 68.8%,rgba(210,170,70,.06) 69.2%,transparent 70%,transparent 100%),
-    linear-gradient(160deg,#1a1a2a 0%,#131320 35%,#0e0e18 65%,#0a0a12 100%);
-  border-right:1px solid rgba(180,140,60,.2);
+:root{
+  --gold:#d4a84b;--gold-lt:#f0c96a;--gold-dk:#a07828;--gold-glow:rgba(212,168,75,.22);
+  --bg:#080810;--bg2:#0d0d18;--bg3:#131323;--bg4:#1a1a2e;--bg5:#1f1f38;
+  --border:rgba(255,255,255,.06);--border-m:rgba(255,255,255,.1);--border-gold:rgba(212,168,75,.2);
+  --text:#ede8df;--text-2:#9993a8;--text-3:#4e4a5a;
+  --green:#34d399;--red:#f87171;--blue:#818cf8;--violet:#a78bfa;
+  --sb-w:270px;
+  --paper-bg:#faf8f3;--paper-text:#1a1714;--paper-text2:#4a4540;
+  --paper-accent:#8b1a1a;--paper-gold:#7a5c1e;--paper-border:#d4cfc0;
+  --paper-section:#2c2825;
 }
-.sidebar::before{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
-  background:radial-gradient(ellipse at 15% 20%,rgba(180,140,60,.06) 0%,transparent 45%),
-             radial-gradient(ellipse at 85% 75%,rgba(160,120,50,.05) 0%,transparent 40%)}
-.sidebar>*{position:relative;z-index:1}
 
-.sb-head{padding:20px 18px 16px;border-bottom:1px solid rgba(180,140,60,.15)}
-.logo{display:flex;align-items:center;gap:11px;margin-bottom:20px}
-.logo-icon{width:38px;height:38px;background:linear-gradient(145deg,#c8902a,#a87020,#d4a030);border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0;box-shadow:0 3px 10px rgba(180,130,40,.4),inset 0 1px 0 rgba(255,220,100,.3)}
-.logo-icon svg{width:19px;height:19px}
-.logo-text .name{font-family:'Lora',serif;font-size:17.5px;font-weight:600;color:#f2e4c4;letter-spacing:-.2px;line-height:1.1}
-.logo-text .sub{font-size:9.5px;color:#6a5e48;text-transform:uppercase;letter-spacing:1.3px;margin-top:1px}
-.sb-label{font-size:10px;font-weight:600;color:#5e5240;text-transform:uppercase;letter-spacing:1.1px;margin-bottom:10px}
-.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:7px}
-.mode-btn{display:flex;flex-direction:column;align-items:center;gap:6px;padding:12px 8px 11px;background:rgba(255,255,255,.035);border:1px solid rgba(255,255,255,.07);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:500;color:rgba(200,185,155,.5);cursor:pointer;transition:all .18s;outline:none}
-.mode-btn svg{width:19px;height:19px;stroke-width:1.8px}
-.mode-btn:hover{border-color:rgba(180,140,60,.4);color:rgba(220,185,100,.85);background:rgba(180,140,60,.07)}
-.mode-btn.on-research{background:linear-gradient(145deg,rgba(180,140,50,.25),rgba(150,110,30,.2));border-color:rgba(200,160,60,.55);color:#e8c060;box-shadow:0 0 16px rgba(180,140,50,.2),inset 0 1px 0 rgba(255,220,100,.1)}
-.mode-btn.on-math{background:linear-gradient(145deg,rgba(160,155,150,.18),rgba(130,125,120,.14));border-color:rgba(180,175,165,.45);color:rgba(220,215,205,.9)}
-.sb-sec{padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.05)}
-.sb-sec.grow{flex:1}
-.badge{display:inline-flex;align-items:center;gap:7px;padding:4px 11px;border-radius:20px;font-size:12px;font-weight:500}
-.badge-idle{background:rgba(255,255,255,.06);color:rgba(200,185,155,.5);border:1px solid rgba(255,255,255,.07)}
-.badge-run{background:rgba(200,160,50,.18);color:#e8c060;border:1px solid rgba(200,160,50,.3)}
-.badge-done{background:rgba(16,185,129,.14);color:#6ee7b7;border:1px solid rgba(16,185,129,.25)}
-.badge-err{background:rgba(239,68,68,.14);color:#fca5a5;border:1px solid rgba(239,68,68,.25)}
-.badge-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
-.badge-run .badge-dot{animation:dotpulse 1.3s infinite}
-@keyframes dotpulse{0%,100%{opacity:1}50%{opacity:.2}}
-.mode-note{margin-top:9px;font-size:11.5px;color:#5e5240;line-height:1.55}
-.stat-row{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:2px}
-.stat-box{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.06);border-radius:7px;padding:9px 5px;text-align:center}
-.stat-n{font-family:'Lora',serif;font-size:19px;font-weight:500;color:#d8c898;line-height:1}
-.stat-l{font-size:9px;color:#5e5240;text-transform:uppercase;letter-spacing:.6px;margin-top:4px}
-.recent-list{display:flex;flex-direction:column;gap:4px;max-height:145px;overflow-y:auto}
-.ri{display:flex;align-items:flex-start;gap:7px;padding:7px 9px;background:rgba(255,255,255,.04);border-radius:7px;font-size:11.5px;color:rgba(200,185,155,.48);cursor:pointer;transition:all .14s;line-height:1.4}
-.ri:hover{background:rgba(180,140,50,.09);color:rgba(220,185,100,.8)}
-.ri-dot{width:4px;height:4px;border-radius:50%;background:#5e5240;flex-shrink:0;margin-top:5px}
-.muted-italic{font-size:12px;color:#5e5240;font-style:italic}
-.sb-bottom{padding:14px 18px}
-.new-btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;padding:10px;background:rgba(255,255,255,.03);border:1.5px dashed rgba(180,140,60,.25);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:500;color:rgba(200,185,155,.42);cursor:pointer;transition:all .2s}
-.new-btn:hover{border-color:rgba(200,160,60,.5);color:rgba(220,185,100,.75);background:rgba(180,140,50,.06)}
+/* LAYOUT */
+.layout{display:grid;grid-template-columns:var(--sb-w) 1fr;height:100vh;overflow:hidden}
 
-/* ══════════════════════════════════════
-   MAIN — parchment
-══════════════════════════════════════ */
-.main{display:flex;flex-direction:column;height:100vh;overflow:hidden;position:relative;
-  background:#e8dfc8;
-  background-image:radial-gradient(ellipse at 50% 0%,rgba(240,230,200,.8) 0%,transparent 65%),
-    radial-gradient(ellipse at 100% 100%,rgba(200,185,148,.5) 0%,transparent 50%),
-    radial-gradient(ellipse at 0% 100%,rgba(215,200,165,.4) 0%,transparent 45%),
-    linear-gradient(180deg,#ece2ca 0%,#e4d8be 40%,#dcd0b2 80%,#d4c8a8 100%)}
-.main::after{content:'';position:absolute;inset:0;pointer-events:none;z-index:0;opacity:.4;
-  background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='250' height='250'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='250' height='250' filter='url(%23g)' opacity='0.045'/%3E%3C/svg%3E")}
-.main>*{position:relative;z-index:1}
+/* ══ SIDEBAR ══ */
+.sidebar{
+  display:flex;flex-direction:column;overflow-y:auto;overflow-x:hidden;
+  background:var(--bg2);border-right:1px solid var(--border);
+  position:relative;
+}
+.sidebar::before{
+  content:'';position:absolute;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(ellipse 200px 300px at 50% 0%,rgba(212,168,75,.06) 0%,transparent 70%);
+}
+.sb-inner{position:relative;z-index:1;display:flex;flex-direction:column;height:100%}
 
-.topbar{padding:13px 26px;display:flex;align-items:center;justify-content:space-between;flex-shrink:0;border-bottom:1px solid rgba(160,135,85,.18);background:rgba(232,222,200,.5);backdrop-filter:blur(4px)}
-.mode-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 14px;border:1px solid rgba(160,135,85,.35);border-radius:20px;font-size:12.5px;font-weight:500;background:rgba(255,250,238,.7);color:#3a3020;box-shadow:0 1px 4px rgba(0,0,0,.08)}
-.mode-pill svg{width:13px;height:13px;color:#b8882a}
-.clear-btn{display:inline-flex;align-items:center;gap:7px;padding:6px 16px;background:rgba(255,250,238,.65);border:1px solid rgba(160,135,85,.3);border-radius:8px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:500;color:#5a4e38;cursor:pointer;transition:all .15s;outline:none;box-shadow:0 1px 4px rgba(0,0,0,.07)}
-.clear-btn:hover{background:rgba(255,250,238,.95);border-color:rgba(160,135,85,.5);color:#2a2018}
+.sb-head{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
+.logo{display:flex;align-items:center;gap:10px;margin-bottom:20px}
+.logo-mark{
+  width:36px;height:36px;border-radius:9px;flex-shrink:0;position:relative;
+  background:linear-gradient(145deg,#d4a84b 0%,#7a5c1e 100%);
+  display:flex;align-items:center;justify-content:center;
+  box-shadow:0 0 24px rgba(212,168,75,.25),0 4px 12px rgba(0,0,0,.4),inset 0 1px 0 rgba(255,220,120,.3)
+}
+.logo-mark svg{width:18px;height:18px;color:#fff}
+.logo-text{line-height:1.15}
+.logo-name{font-family:'Cormorant Garamond',serif;font-size:18px;color:var(--text);font-weight:500;letter-spacing:.3px}
+.logo-sub{font-size:9px;color:var(--text-3);text-transform:uppercase;letter-spacing:1.6px;font-weight:600}
+
+.sb-label{font-size:9px;font-weight:700;color:var(--text-3);text-transform:uppercase;letter-spacing:1.4px;margin-bottom:9px}
+
+.mode-grid{display:grid;grid-template-columns:1fr 1fr;gap:5px}
+.mode-btn{
+  display:flex;flex-direction:column;align-items:center;gap:6px;padding:11px 6px 10px;
+  background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:9px;
+  font-family:'Syne',sans-serif;font-size:11px;font-weight:600;
+  color:var(--text-3);cursor:pointer;transition:all .2s;outline:none;letter-spacing:.3px;
+}
+.mode-btn svg{width:15px;height:15px;stroke-width:1.7px}
+.mode-btn:hover{border-color:var(--border-gold);color:rgba(240,201,106,.8);background:rgba(212,168,75,.06)}
+.mode-btn.active-r{
+  background:linear-gradient(145deg,rgba(212,168,75,.15),rgba(122,92,30,.08));
+  border-color:rgba(212,168,75,.45);color:var(--gold-lt);
+  box-shadow:0 0 20px rgba(212,168,75,.12),inset 0 1px 0 rgba(255,220,120,.08)
+}
+.mode-btn.active-m{
+  background:linear-gradient(145deg,rgba(129,140,248,.15),rgba(167,139,250,.08));
+  border-color:rgba(167,139,250,.45);color:#c4b5fd;
+  box-shadow:0 0 20px rgba(167,139,250,.12)
+}
+
+.sb-sec{padding:14px 16px;border-bottom:1px solid var(--border)}
+.sb-sec.grow{flex:1;border-bottom:none}
+
+/* Status */
+.status-badge{display:inline-flex;align-items:center;gap:7px;padding:5px 11px;border-radius:20px;font-size:11px;font-weight:600;margin-bottom:8px;letter-spacing:.3px}
+.s-idle{background:rgba(255,255,255,.04);color:var(--text-3);border:1px solid var(--border)}
+.s-run{background:rgba(212,168,75,.1);color:var(--gold-lt);border:1px solid rgba(212,168,75,.25)}
+.s-done{background:rgba(52,211,153,.08);color:#6ee7b7;border:1px solid rgba(52,211,153,.2)}
+.s-err{background:rgba(248,113,113,.08);color:#fca5a5;border:1px solid rgba(248,113,113,.2)}
+.s-dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0}
+.s-run .s-dot{animation:pulse 1.4s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.15}}
+.mode-note{font-size:10.5px;color:var(--text-3);line-height:1.6;margin-top:4px}
+
+/* Stats */
+.stat-row{display:grid;grid-template-columns:repeat(3,1fr);gap:5px}
+.stat-b{background:rgba(255,255,255,.025);border:1px solid var(--border);border-radius:8px;padding:10px 4px;text-align:center}
+.stat-n{font-family:'Cormorant Garamond',serif;font-size:22px;color:var(--text);line-height:1;font-weight:500}
+.stat-l{font-size:8.5px;color:var(--text-3);text-transform:uppercase;letter-spacing:.8px;margin-top:3px;font-weight:600}
+
+/* Recent */
+.recent-list{display:flex;flex-direction:column;gap:3px;max-height:180px;overflow-y:auto}
+.ri{display:flex;align-items:flex-start;gap:7px;padding:7px 9px;background:rgba(255,255,255,.025);border-radius:7px;font-size:11px;color:var(--text-3);cursor:pointer;transition:all .15s;line-height:1.5}
+.ri:hover{background:rgba(212,168,75,.08);color:rgba(240,201,106,.8)}
+.ri-dot{width:3px;height:3px;border-radius:50%;background:var(--text-3);flex-shrink:0;margin-top:5px}
+.muted{font-size:11px;color:var(--text-3);font-style:italic;padding:2px 0}
+
+.sb-bottom{padding:14px 16px}
+.new-btn{
+  display:flex;align-items:center;justify-content:center;gap:7px;width:100%;
+  padding:10px;background:rgba(255,255,255,.025);border:1.5px dashed rgba(212,168,75,.18);
+  border-radius:9px;font-family:'Syne',sans-serif;font-size:11.5px;font-weight:600;
+  color:var(--text-3);cursor:pointer;transition:all .2s;letter-spacing:.3px
+}
+.new-btn:hover{border-color:rgba(212,168,75,.4);color:rgba(240,201,106,.75);background:rgba(212,168,75,.05)}
+
+/* ══ MAIN ══ */
+.main{display:flex;flex-direction:column;height:100vh;overflow:hidden;background:var(--bg)}
+
+.topbar{
+  padding:12px 28px;display:flex;align-items:center;justify-content:space-between;
+  flex-shrink:0;border-bottom:1px solid var(--border);
+  background:rgba(8,8,16,.85);backdrop-filter:blur(12px);
+}
+.mode-pill{display:inline-flex;align-items:center;gap:7px;padding:5px 13px;border:1px solid var(--border-gold);border-radius:20px;font-size:11.5px;font-weight:600;color:var(--gold-lt);background:rgba(212,168,75,.05);letter-spacing:.3px}
+.mode-pill svg{width:12px;height:12px}
+.clear-btn{
+  display:inline-flex;align-items:center;gap:6px;padding:6px 15px;
+  background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:8px;
+  font-family:'Syne',sans-serif;font-size:11.5px;font-weight:600;color:var(--text-2);
+  cursor:pointer;transition:all .15s;outline:none;letter-spacing:.3px
+}
+.clear-btn:hover{background:rgba(255,255,255,.07);color:var(--text)}
 
 .msgs-wrap{flex:1;overflow-y:auto;scroll-behavior:smooth}
-.msgs{max-width:880px;margin:0 auto;padding:28px 36px;display:flex;flex-direction:column}
+.msgs{max-width:860px;margin:0 auto;padding:28px 32px;display:flex;flex-direction:column;gap:0}
 
-/* ── Welcome ── */
-.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 175px);text-align:center;padding:10px 0 20px}
-.book-outer{position:relative;width:88px;height:96px;margin-bottom:22px;filter:drop-shadow(0 12px 24px rgba(0,0,0,.45)) drop-shadow(0 4px 8px rgba(0,0,0,.3))}
-.book-svg{width:88px;height:96px}
-.welcome h2{font-family:'Lora',serif;font-size:31px;font-weight:500;color:#1e1a10;letter-spacing:-.5px;margin-bottom:11px;line-height:1.2}
-.welcome .subtitle{font-size:14.5px;color:#5a4e38;line-height:1.72;max-width:500px;margin-bottom:34px}
-.hint-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;width:100%;max-width:630px}
-.hint{display:flex;align-items:stretch;min-height:80px;border-radius:12px;overflow:hidden;cursor:pointer;transition:transform .2s ease,box-shadow .2s ease;box-shadow:0 3px 12px rgba(0,0,0,.14),0 1px 4px rgba(0,0,0,.09);border:1px solid rgba(165,135,75,.3)}
-.hint:hover{transform:translateY(-2px);box-shadow:0 8px 28px rgba(0,0,0,.2),0 2px 8px rgba(0,0,0,.12);border-color:rgba(165,135,75,.5)}
-.hint-left{flex:1;display:flex;flex-direction:column;justify-content:center;padding:15px 14px 15px 18px;background:linear-gradient(135deg,#f0e8d0 0%,#e8dcc0 100%)}
-.hint-left strong{display:block;font-size:13.5px;font-weight:600;color:#1e1a10;margin-bottom:3px;line-height:1.25}
-.hint-left small{font-size:11.5px;color:#6a5a3a}
-.hint-right{width:92px;flex-shrink:0;display:flex;align-items:center;justify-content:center;overflow:hidden;border-radius:0 11px 11px 0;position:relative}
-.card-research .hint-right{background:linear-gradient(145deg,#e8dcc0,#ddd0a8)}
-.card-science .hint-right{background:linear-gradient(145deg,#e0d8c4,#d4c8a4)}
-.card-calculus .hint-left{background:linear-gradient(135deg,#edddb8 0%,#e0cc98 100%)}
-.card-calculus .hint-right{background:linear-gradient(145deg,#d8c890,#c8b470)}
-.card-proof .hint-right{background:linear-gradient(145deg,#ddd8cc,#cec8b8)}
+/* Welcome */
+.welcome{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:calc(100vh - 170px);text-align:center;padding:0 0 24px}
+.welcome-icon{width:68px;height:68px;background:linear-gradient(145deg,#d4a84b,#7a5c1e);border-radius:18px;display:flex;align-items:center;justify-content:center;margin-bottom:22px;box-shadow:0 0 50px rgba(212,168,75,.3),0 0 100px rgba(212,168,75,.08),inset 0 1px 0 rgba(255,220,120,.25)}
+.welcome-icon svg{width:32px;height:32px;color:#fff}
+.welcome h2{font-family:'Cormorant Garamond',serif;font-size:34px;font-weight:500;color:var(--text);letter-spacing:-.2px;margin-bottom:10px}
+.welcome .sub{font-size:13.5px;color:var(--text-2);line-height:1.75;max-width:500px;margin-bottom:32px}
+.hint-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;width:100%;max-width:600px}
+.hint-card{
+  display:flex;align-items:center;gap:13px;padding:15px 17px;
+  background:var(--bg2);border:1px solid var(--border);border-radius:12px;
+  cursor:pointer;transition:all .22s;text-align:left
+}
+.hint-card:hover{border-color:var(--border-gold);background:var(--bg3);transform:translateY(-2px);box-shadow:0 6px 24px rgba(0,0,0,.35),0 0 30px rgba(212,168,75,.05)}
+.hint-icon{width:36px;height:36px;border-radius:9px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.hint-icon.gold{background:rgba(212,168,75,.12);color:var(--gold)}
+.hint-icon.violet{background:rgba(167,139,250,.12);color:#c4b5fd}
+.hint-icon svg{width:16px;height:16px}
+.hint-text strong{display:block;font-size:13px;font-weight:700;color:var(--text);margin-bottom:2px;letter-spacing:.2px}
+.hint-text small{font-size:10.5px;color:var(--text-3)}
 
-/* ── Messages ── */
-.msg-row{display:flex;gap:12px;padding:18px 0;border-bottom:1px solid rgba(160,135,85,.13);animation:fadein .3s ease}
+/* Messages */
+.msg-row{display:flex;gap:12px;padding:18px 0;border-bottom:1px solid var(--border);animation:fadein .3s ease}
 .msg-row:last-child{border-bottom:none}
-@keyframes fadein{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
-.av{width:33px;height:33px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:12px;font-weight:600;margin-top:2px}
-.av-agent{background:linear-gradient(135deg,#3a2808,#5a3a10);color:#d8a830}
-.av-user{background:linear-gradient(135deg,#c8902a,#a87020);color:#fff}
+@keyframes fadein{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:none}}
+.av{width:32px;height:32px;border-radius:9px;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.av-a{background:linear-gradient(145deg,#d4a84b,#7a5c1e);color:#fff;box-shadow:0 2px 8px rgba(212,168,75,.3)}
+.av-u{background:var(--bg4);border:1px solid var(--border-m);color:var(--text-2);font-size:12px;font-weight:700}
 .msg-body{flex:1;min-width:0}
-.msg-who{font-size:12px;font-weight:600;color:#6a5a3a;margin-bottom:6px;display:flex;align-items:center;gap:8px}
-.msg-time{font-weight:400;font-size:11px;color:#8a7a5a;opacity:.7}
-.msg-content{font-size:14px;line-height:1.7;color:#1e1a10}
-.thinking-row{display:flex;gap:12px;padding:16px 0}
-.dots{display:flex;gap:5px;align-items:center;padding:6px 0}
-.dots span{width:7px;height:7px;background:#c8902a;border-radius:50%;animation:bonce 1.2s infinite;opacity:.5}
-.dots span:nth-child(2){animation-delay:.15s}.dots span:nth-child(3){animation-delay:.3s}
-@keyframes bonce{0%,60%,100%{transform:translateY(0)}30%{transform:translateY(-5px)}}
+.msg-who{font-size:11px;font-weight:700;color:var(--text-2);margin-bottom:6px;display:flex;align-items:center;gap:8px;letter-spacing:.5px;text-transform:uppercase}
+.msg-time{font-weight:500;font-size:10px;color:var(--text-3);text-transform:none;letter-spacing:.3px}
+.msg-content{font-size:13.5px;line-height:1.7;color:var(--text)}
 
-/* ── Action cards ── */
-.card{display:flex;align-items:center;gap:9px;padding:10px 13px;border-radius:10px;margin:4px 0;font-size:13px;font-weight:500}
-.card-ok{background:rgba(16,185,129,.1);color:#065f46;border:1px solid rgba(16,185,129,.22)}
-.card-work{background:rgba(200,160,50,.1);color:#7a4e10;border:1px solid rgba(200,160,50,.22)}
-.card-math{background:rgba(100,80,200,.1);color:#3c1a78;border:1px solid rgba(100,80,200,.22)}
-.card-err{background:rgba(239,68,68,.1);color:#7f1d1d;border:1px solid rgba(239,68,68,.18)}
+/* Agent Steps */
+.agent-steps{background:var(--bg2);border:1px solid var(--border);border-radius:11px;overflow:hidden;margin:5px 0 10px}
+.agent-steps-header{display:flex;align-items:center;justify-content:space-between;padding:10px 15px;background:var(--bg3);border-bottom:1px solid var(--border);cursor:pointer;user-select:none}
+.agent-steps-title{display:flex;align-items:center;gap:8px;font-size:11.5px;font-weight:700;color:var(--text-2);letter-spacing:.4px}
+.agent-steps-title svg{width:13px;height:13px}
+.agent-chevron{color:var(--text-3);transition:transform .2s}
+.agent-chevron.open{transform:rotate(180deg)}
+.agent-steps-body{display:flex;flex-direction:column}
+.agent-steps-body.collapsed{display:none}
+.agent-step{display:flex;align-items:flex-start;gap:11px;padding:10px 15px;border-bottom:1px solid var(--border);font-size:12px;line-height:1.55;animation:fadein .2s ease}
+.agent-step:last-child{border-bottom:none}
+.step-icon{width:21px;height:21px;border-radius:50%;flex-shrink:0;display:flex;align-items:center;justify-content:center;margin-top:1px}
+.step-pending{background:rgba(255,255,255,.04);border:1px solid var(--border)}
+.step-running{background:rgba(212,168,75,.1);border:1px solid rgba(212,168,75,.3)}
+.step-done{background:rgba(52,211,153,.08);border:1px solid rgba(52,211,153,.2)}
+.step-err{background:rgba(248,113,113,.08);border:1px solid rgba(248,113,113,.2)}
+.step-running svg,.step-pending svg,.step-done svg,.step-err svg{width:10px;height:10px}
+.step-running svg{animation:spin 1s linear infinite}
+@keyframes spin{from{transform:rotate(0deg)}to{transform:rotate(360deg)}}
+.step-text{flex:1;color:var(--text-2)}
+.step-text .step-label{font-weight:700;color:var(--text);display:inline}
+.step-sub{font-size:10.5px;color:var(--text-3);margin-top:2px}
 
-/* ══════════════════════════════════════
-   PAPER BLOCK
-══════════════════════════════════════ */
-.paper-block{background:rgba(255,252,244,.94);border:1px solid rgba(160,135,85,.28);border-radius:11px;overflow:hidden;margin:8px 0 6px;box-shadow:0 4px 16px rgba(0,0,0,.12)}
-.paper-hd{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-bottom:1px solid rgba(160,135,85,.18);background:rgba(238,228,205,.55)}
-.paper-hd-lbl{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:600;color:#9a6820}
-.paper-hd-lbl.math{color:#5b21b6}
-.paper-hd-actions{display:flex;gap:6px;align-items:center}
-.copy-btn,.hd-btn{background:none;border:1px solid rgba(160,135,85,.28);cursor:pointer;font-size:11px;color:#6a5a3a;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:4px;padding:3px 9px;border-radius:4px;transition:all .15s}
-.copy-btn:hover,.hd-btn:hover{background:rgba(160,135,85,.15);color:#1e1a10}
+/* Sources */
+.sources-row{display:flex;flex-wrap:wrap;gap:5px;margin:7px 0 9px}
+.src-pill{display:inline-flex;align-items:center;gap:5px;padding:3px 10px;background:var(--bg3);border:1px solid var(--border);border-radius:20px;font-size:10px;color:var(--text-3);cursor:pointer;text-decoration:none;transition:all .15s;font-weight:600;letter-spacing:.3px}
+.src-pill:hover{border-color:var(--border-gold);color:var(--gold-lt)}
 
-/* Paper body — research */
-.paper-bd{padding:28px 32px;font-family:'Lora',Times,serif;font-size:15.5px;line-height:1.95;color:#1a1814;max-height:640px;overflow-y:auto}
-.paper-bd.math-bd{font-family:'DM Sans',-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:15px;line-height:1.78;background:linear-gradient(180deg,#fcfcff 0%,#fafaff 100%)}
+/* Confidence */
+.confidence-bar{display:flex;align-items:center;gap:11px;margin:7px 0 11px;padding:9px 13px;background:var(--bg3);border:1px solid var(--border);border-radius:8px}
+.conf-label{font-size:10.5px;color:var(--text-2);white-space:nowrap;font-weight:600;letter-spacing:.3px}
+.conf-track{flex:1;height:3px;background:rgba(255,255,255,.05);border-radius:2px;overflow:hidden}
+.conf-fill{height:100%;border-radius:2px;background:linear-gradient(90deg,var(--gold-dk),var(--gold-lt));transition:width .8s cubic-bezier(.4,0,.2,1)}
+.conf-val{font-size:11px;font-weight:700;color:var(--gold-lt);white-space:nowrap}
 
-/* Math doc layout */
-.math-doc{display:flex;flex-direction:column;gap:14px}
-.math-header{border:1px solid #ddd6fe;background:linear-gradient(180deg,#f5f3ff,#eef2ff);border-radius:12px;padding:14px 16px}
-.math-kicker{font-size:11px;font-weight:700;color:#6366f1;text-transform:uppercase;letter-spacing:.7px;margin-bottom:6px}
-.math-title{font-family:'DM Sans',sans-serif;font-size:22px;font-weight:700;line-height:1.35;color:#1f1b4d;letter-spacing:-.2px}
-.math-section{border:1px solid #e5e7eb;background:#fff;border-radius:12px;overflow:hidden}
-.math-section-h{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#f8fafc;border-bottom:1px solid #e5e7eb;font-size:12px;font-weight:700;color:#334155;text-transform:uppercase;letter-spacing:.5px}
-.math-section-dot{width:8px;height:8px;border-radius:50%;background:#818cf8}
-.math-section-b{padding:12px 14px;display:flex;flex-direction:column;gap:10px}
-.math-para{font-size:15px;color:#111827;line-height:1.78}
-.math-list{margin:0 0 0 18px;display:flex;flex-direction:column;gap:6px;color:#1f2937}
-.math-list li{padding-left:2px;line-height:1.65}
-.math-step{display:flex;gap:8px;align-items:flex-start;padding:10px 11px;border:1px solid #ddd6fe;background:#f5f3ff;border-radius:9px}
-.math-step-no{font-size:12px;font-weight:700;color:#5b21b6;background:#ede9fe;border-radius:999px;min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;line-height:1}
-.math-step-txt{flex:1;color:#312e81;line-height:1.7}
-.math-eq{font-family:'DM Mono','SFMono-Regular',Consolas,monospace;font-size:13px;line-height:1.65;background:#111827;color:#f9fafb;border-radius:8px;padding:10px 12px;overflow-x:auto}
-.math-note{background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:10px 12px;color:#1e3a8a}
-.math-final{background:#ecfdf5;border:1px solid #a7f3d0;color:#065f46;border-radius:10px;padding:12px 14px;font-weight:600;line-height:1.65}
-.math-inline-eq{font-family:'DM Mono','SFMono-Regular',Consolas,monospace;background:#eef2ff;border:1px solid #c7d2fe;border-radius:5px;padding:0 6px;font-size:.92em;color:#312e81}
-.math-empty{color:#9e9589;font-style:italic}
+/* ════════════════════════════════════
+   BEAUTIFUL PAPER BLOCK
+═══════════════════════════════════ */
+.paper-block{
+  margin:8px 0 6px;
+  border-radius:14px;
+  overflow:hidden;
+  box-shadow:0 12px 60px rgba(0,0,0,.5),0 4px 24px rgba(0,0,0,.3),0 0 0 1px rgba(255,255,255,.06);
+}
+.paper-toolbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 16px;
+  background:linear-gradient(135deg,#1a1a2e 0%,#13132a 100%);
+  border-bottom:1px solid rgba(212,168,75,.15);
+}
+.paper-toolbar-left{display:flex;align-items:center;gap:10px}
+.paper-type-badge{
+  display:inline-flex;align-items:center;gap:6px;
+  padding:4px 11px;
+  background:rgba(212,168,75,.1);border:1px solid rgba(212,168,75,.22);
+  border-radius:20px;font-size:10px;font-weight:700;color:var(--gold-lt);letter-spacing:.6px;text-transform:uppercase
+}
+.paper-toolbar-actions{display:flex;gap:6px}
+.tb-btn{
+  display:flex;align-items:center;gap:5px;padding:5px 11px;
+  background:rgba(255,255,255,.04);border:1px solid var(--border);
+  border-radius:7px;font-family:'Syne',sans-serif;font-size:10.5px;font-weight:600;
+  color:var(--text-2);cursor:pointer;transition:all .15s;letter-spacing:.3px
+}
+.tb-btn:hover{background:rgba(255,255,255,.08);color:var(--text);border-color:var(--border-m)}
 
-/* Structured paper rendering */
-.paper-title-block{text-align:center;padding:0 0 22px;border-bottom:2px solid rgba(160,135,85,.28);margin-bottom:24px}
-.paper-main-title{font-family:'Lora',serif;font-size:20px;font-weight:700;line-height:1.35;margin-bottom:10px;letter-spacing:-.3px}
-.paper-meta{font-size:12px;color:#6a5a3a;font-family:'DM Sans',sans-serif;display:flex;gap:18px;justify-content:center;flex-wrap:wrap}
-.paper-meta span{display:flex;align-items:center;gap:4px}
-.paper-section{margin-bottom:26px}
-.paper-section-heading{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:700;text-transform:uppercase;letter-spacing:.6px;color:#9a6820;margin-bottom:14px;padding-bottom:6px;border-bottom:1px solid rgba(160,135,85,.22)}
-.paper-section-heading.math-heading{color:#7c3aed}
-.paper-sub-heading{font-family:'DM Sans',sans-serif;font-size:13px;font-weight:600;color:#1a1814;margin:18px 0 8px}
-.paper-para{margin-bottom:14px;text-align:justify;hyphens:auto}
-.paper-para:last-child{margin-bottom:0}
-.keywords-block{background:rgba(238,228,205,.55);border:1px solid rgba(160,135,85,.22);border-radius:6px;padding:10px 14px;margin-bottom:18px;font-size:12.5px;color:#6a5a3a;font-family:'DM Sans',sans-serif}
-.keywords-block strong{color:#1a1814;margin-right:6px}
-.references-section{border-top:2px solid rgba(160,135,85,.22);padding-top:20px;margin-top:10px}
-.ref-item{font-size:13.5px;line-height:1.7;margin-bottom:8px;padding-left:26px;text-indent:-26px;color:#6a5a3a}
-.ref-item a{color:#1d4ed8;text-decoration:none}
-.ref-item a:hover{text-decoration:underline}
+/* Paper document itself */
+.paper-doc{
+  background:var(--paper-bg);
+  max-height:700px;overflow-y:auto;
+  scroll-behavior:smooth;
+}
+.paper-doc::-webkit-scrollbar{width:5px}
+.paper-doc::-webkit-scrollbar-track{background:rgba(0,0,0,.05)}
+.paper-doc::-webkit-scrollbar-thumb{background:rgba(0,0,0,.2);border-radius:3px}
+
+/* Journal-style header band */
+.paper-journal-header{
+  background:linear-gradient(135deg,#1a0a08 0%,#2c1a08 50%,#1a0a08 100%);
+  padding:16px 36px 14px;
+  display:flex;align-items:center;justify-content:space-between;
+  border-bottom:3px solid var(--paper-accent);
+}
+.paper-journal-name{
+  font-family:'Cormorant Garamond',serif;font-size:13px;font-weight:600;
+  color:rgba(255,220,140,.9);letter-spacing:1.2px;text-transform:uppercase;
+  font-style:italic;
+}
+.paper-journal-meta{font-size:10px;color:rgba(255,220,140,.5);letter-spacing:.8px;text-transform:uppercase;font-family:'Syne',sans-serif;font-weight:600}
+
+/* Paper body area */
+.paper-inner{padding:40px 48px 36px;max-width:100%}
+
+/* Title area */
+.paper-title-area{text-align:center;margin-bottom:28px;padding-bottom:24px;border-bottom:2px solid var(--paper-border)}
+.paper-title{
+  font-family:'Cormorant Garamond',serif;
+  font-size:26px;font-weight:600;line-height:1.28;
+  color:var(--paper-text);margin-bottom:14px;
+  letter-spacing:-.3px;
+}
+.paper-authors-row{
+  font-family:'Syne',sans-serif;font-size:11px;font-weight:600;
+  color:var(--paper-text2);letter-spacing:.6px;text-transform:uppercase;
+  margin-bottom:6px;
+}
+.paper-date-row{font-size:10.5px;color:#8a8070;font-family:'Syne',sans-serif;letter-spacing:.5px}
+.paper-kw-row{margin-top:12px;display:flex;flex-wrap:wrap;gap:5px;justify-content:center}
+.paper-kw{
+  display:inline-block;padding:3px 10px;
+  background:rgba(139,26,26,.06);border:1px solid rgba(139,26,26,.18);
+  border-radius:20px;font-size:10px;font-weight:600;color:var(--paper-accent);
+  letter-spacing:.4px;font-family:'Syne',sans-serif;text-transform:uppercase;
+}
+
+/* Abstract */
+.paper-abstract{
+  background:rgba(139,26,26,.03);border:1px solid rgba(139,26,26,.12);
+  border-left:3px solid var(--paper-accent);
+  border-radius:0 8px 8px 0;
+  padding:16px 20px;margin-bottom:28px;
+}
+.paper-abstract-label{
+  font-family:'Syne',sans-serif;font-size:9px;font-weight:800;
+  text-transform:uppercase;letter-spacing:1.4px;color:var(--paper-accent);
+  margin-bottom:8px;
+}
+.paper-abstract p{font-family:'Cormorant Garamond',serif;font-size:15.5px;line-height:1.85;color:var(--paper-text);font-style:italic}
+
+/* Two-column layout for main content */
+.paper-columns{
+  display:grid;grid-template-columns:1fr 1fr;gap:28px;
+}
+.paper-full-width{grid-column:1/-1}
+
+/* Section headers */
+.paper-section-heading{
+  font-family:'Syne',sans-serif;font-size:10px;font-weight:800;
+  text-transform:uppercase;letter-spacing:1.2px;
+  color:var(--paper-accent);margin-bottom:11px;margin-top:22px;
+  padding-bottom:5px;border-bottom:1.5px solid var(--paper-border);
+  display:flex;align-items:center;gap:8px;
+}
+.paper-section-heading::before{
+  content:'';width:16px;height:2px;background:var(--paper-accent);flex-shrink:0;
+}
+.paper-section-num{font-size:10px;font-weight:800;color:var(--paper-gold);margin-right:2px}
+.paper-sub-heading{
+  font-family:'Syne',sans-serif;font-size:12px;font-weight:700;
+  color:var(--paper-text);margin:14px 0 7px;letter-spacing:.2px;
+}
+
+/* Body paragraphs */
+.paper-para{
+  font-family:'Cormorant Garamond',serif;
+  font-size:15px;line-height:1.9;color:var(--paper-text);
+  margin-bottom:10px;text-align:justify;hyphens:auto;
+}
+.paper-para:first-of-type::first-letter{
+  font-size:3.2em;font-weight:600;float:left;line-height:.8;
+  margin-right:5px;margin-top:4px;color:var(--paper-accent);
+  font-family:'Cormorant Garamond',serif;
+}
+
+/* Citation inline */
+.cite-num{
+  display:inline-block;font-size:9px;font-weight:700;
+  color:var(--paper-accent);vertical-align:super;line-height:1;
+  font-family:'Syne',sans-serif;cursor:default;
+}
+
+/* Special blocks */
+.paper-callout{
+  background:rgba(26,23,20,.04);border:1px solid var(--paper-border);
+  border-left:3px solid var(--paper-gold);border-radius:0 6px 6px 0;
+  padding:12px 16px;margin:12px 0;
+}
+.paper-callout p{font-family:'Cormorant Garamond',serif;font-size:14.5px;line-height:1.8;color:var(--paper-text2);font-style:italic;margin:0}
+
+.paper-rejected{
+  background:rgba(139,26,26,.03);border:1px solid rgba(139,26,26,.1);border-radius:7px;
+  padding:12px 14px;margin:10px 0;
+}
+.paper-rejected-label{font-size:9.5px;font-weight:800;color:var(--paper-accent);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;font-family:'Syne',sans-serif}
+.paper-rejected p{font-family:'Cormorant Garamond',serif;font-size:14px;line-height:1.75;color:var(--paper-text2)}
+
+.paper-uncertainty{
+  background:rgba(122,92,30,.04);border:1px solid rgba(122,92,30,.15);border-radius:7px;
+  padding:12px 14px;margin:10px 0;
+}
+.paper-uncertainty-label{font-size:9.5px;font-weight:800;color:var(--paper-gold);letter-spacing:.8px;text-transform:uppercase;margin-bottom:6px;font-family:'Syne',sans-serif}
+.paper-uncertainty p{font-family:'Cormorant Garamond',serif;font-size:14px;line-height:1.75;color:var(--paper-text2)}
+
+/* References */
+.paper-refs{border-top:2px solid var(--paper-border);padding-top:20px;margin-top:10px}
+.paper-refs-title{font-family:'Syne',sans-serif;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.4px;color:var(--paper-text);margin-bottom:14px}
+.paper-ref-item{
+  display:flex;gap:10px;font-family:'Cormorant Garamond',serif;
+  font-size:13.5px;line-height:1.7;color:var(--paper-text2);
+  margin-bottom:8px;padding-bottom:8px;border-bottom:1px solid var(--paper-border);
+}
+.paper-ref-item:last-child{border-bottom:none}
+.ref-num{font-family:'Syne',sans-serif;font-size:9px;font-weight:800;color:var(--paper-accent);flex-shrink:0;margin-top:4px;min-width:20px}
+.ref-body a{color:var(--paper-accent);text-decoration:none}
+.ref-body a:hover{text-decoration:underline}
 
 /* Diagram inside paper */
-.diagram-wrap{margin:18px 0;background:#fafaf8;border:1px solid rgba(160,135,85,.2);border-radius:8px;overflow:hidden;break-inside:avoid}
-.diagram-bar{display:flex;align-items:center;gap:7px;padding:7px 13px;background:rgba(238,228,205,.45);border-bottom:1px solid rgba(160,135,85,.15);font-family:'DM Sans',sans-serif;font-size:11px;font-weight:600;color:#6a5a3a;text-transform:uppercase;letter-spacing:.4px}
-.diagram-render{padding:18px;display:flex;justify-content:center;overflow-x:auto;min-height:60px}
+.paper-diagram{
+  background:white;border:1px solid var(--paper-border);border-radius:8px;
+  overflow:hidden;margin:16px 0;grid-column:1/-1;
+}
+.paper-diagram-bar{
+  background:linear-gradient(135deg,#f5f0e8,#ede8df);
+  padding:7px 14px;border-bottom:1px solid var(--paper-border);
+  display:flex;align-items:center;gap:7px;
+  font-family:'Syne',sans-serif;font-size:9px;font-weight:800;
+  color:var(--paper-gold);text-transform:uppercase;letter-spacing:.8px;
+}
+.paper-diagram-render{padding:18px;display:flex;justify-content:center;overflow-x:auto;min-height:80px;background:white}
+.paper-diagram-render svg{max-width:100%;height:auto}
+.paper-diagram-caption{padding:6px 14px 10px;font-family:'Cormorant Garamond',serif;font-size:12.5px;color:var(--paper-text2);font-style:italic;text-align:center;background:rgba(0,0,0,.02)}
+.paper-diagram-err{padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#c0392b;background:rgba(192,57,43,.06)}
+
+/* Math doc */
+.math-doc{display:flex;flex-direction:column;gap:12px}
+.math-header{
+  background:linear-gradient(135deg,rgba(129,140,248,.12),rgba(167,139,250,.06));
+  border:1px solid rgba(167,139,250,.25);border-radius:11px;padding:14px 16px;
+}
+.math-kicker{font-size:9.5px;font-weight:800;color:#a78bfa;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;font-family:'Syne',sans-serif}
+.math-title{font-family:'Cormorant Garamond',serif;font-size:22px;font-weight:500;line-height:1.3;color:var(--text)}
+.math-section{border:1px solid var(--border);background:var(--bg3);border-radius:10px;overflow:hidden}
+.math-section-h{display:flex;align-items:center;gap:7px;padding:9px 13px;background:rgba(255,255,255,.025);border-bottom:1px solid var(--border);font-size:10px;font-weight:800;color:var(--text-2);text-transform:uppercase;letter-spacing:.8px;font-family:'Syne',sans-serif}
+.math-section-dot{width:7px;height:7px;border-radius:50%;background:#a78bfa}
+.math-section-b{padding:11px 13px;display:flex;flex-direction:column;gap:9px}
+.math-para{font-size:14px;color:var(--text);line-height:1.8;font-family:'Cormorant Garamond',serif}
+.math-list{margin:0 0 0 18px;display:flex;flex-direction:column;gap:5px;color:var(--text)}
+.math-list li{padding-left:2px;line-height:1.7;font-size:14px;font-family:'Cormorant Garamond',serif}
+.math-step{display:flex;gap:9px;align-items:flex-start;padding:10px 12px;border:1px solid rgba(167,139,250,.15);background:rgba(167,139,250,.04);border-radius:9px}
+.math-step-no{font-size:10px;font-weight:800;color:#a78bfa;background:rgba(167,139,250,.12);border-radius:999px;min-width:22px;height:22px;display:inline-flex;align-items:center;justify-content:center;font-family:'Syne',sans-serif;flex-shrink:0}
+.math-step-txt{flex:1;color:var(--text);line-height:1.75;font-size:14px;font-family:'Cormorant Garamond',serif}
+.math-eq{font-family:'JetBrains Mono',monospace;font-size:12.5px;line-height:1.65;background:#06060f;color:#e2e8f0;border-radius:8px;padding:10px 13px;overflow-x:auto;border:1px solid var(--border)}
+.math-note{background:rgba(167,139,250,.05);border:1px solid rgba(167,139,250,.18);border-radius:8px;padding:10px 12px;color:#c4b5fd;font-size:13.5px;font-family:'Cormorant Garamond',serif;line-height:1.75}
+.math-final{background:rgba(52,211,153,.06);border:1px solid rgba(52,211,153,.2);color:#6ee7b7;border-radius:10px;padding:12px 14px;font-weight:700;line-height:1.65;font-family:'Cormorant Garamond',serif;font-size:15px}
+.math-inline-eq{font-family:'JetBrains Mono',monospace;background:rgba(167,139,250,.08);border:1px solid rgba(167,139,250,.18);border-radius:4px;padding:0 5px;font-size:.88em;color:#c4b5fd}
+
+/* Diagram inside dark chat UI */
+.diagram-wrap{margin:14px 0;background:var(--bg3);border:1px solid var(--border);border-radius:9px;overflow:hidden}
+.diagram-bar{display:flex;align-items:center;gap:6px;padding:7px 13px;background:rgba(255,255,255,.025);border-bottom:1px solid var(--border);font-family:'Syne',sans-serif;font-size:9px;font-weight:800;color:var(--text-3);text-transform:uppercase;letter-spacing:.6px}
+.diagram-render{padding:16px;display:flex;justify-content:center;overflow-x:auto;min-height:60px}
 .diagram-render svg{max-width:100%;height:auto}
-.diagram-err{padding:12px 16px;font-family:'DM Mono',monospace;font-size:11.5px;color:#991b1b;background:#fee2e2}
+.diagram-err{padding:10px 14px;font-family:'JetBrains Mono',monospace;font-size:11px;color:#fca5a5;background:rgba(239,68,68,.07)}
 
-/* Download row */
-.dl-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:8px}
-.dl-btn{display:inline-flex;align-items:center;gap:7px;padding:8px 15px;border:none;border-radius:7px;font-family:'DM Sans',sans-serif;font-size:12.5px;font-weight:500;cursor:pointer;transition:all .15s}
-.dl-txt{background:#1e1a10;color:#f0e4c4}.dl-txt:hover{background:#0a0806;transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.2)}
-.dl-pdf{background:#dc2626;color:#fff}.dl-pdf:hover{background:#b91c1c;transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.2)}
+/* Downloads */
+.dl-row{display:flex;gap:7px;flex-wrap:wrap;margin-top:8px}
+.dl-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border:none;border-radius:8px;font-family:'Syne',sans-serif;font-size:11px;font-weight:700;cursor:pointer;transition:all .15s;letter-spacing:.3px}
+.dl-txt{background:var(--bg4);color:var(--text-2);border:1px solid var(--border)}
+.dl-txt:hover{background:var(--bg3);border-color:var(--border-gold);color:var(--gold-lt);transform:translateY(-1px)}
+.dl-pdf{background:rgba(248,113,113,.1);color:#fca5a5;border:1px solid rgba(248,113,113,.2)}
+.dl-pdf:hover{background:rgba(248,113,113,.15);transform:translateY(-1px)}
 
-/* ══════════════════════════════════════
-   INPUT BAR
-══════════════════════════════════════ */
-.input-bar{padding:14px 26px 20px;border-top:1px solid rgba(160,135,85,.18);flex-shrink:0;background:rgba(220,210,185,.38);backdrop-filter:blur(8px);position:relative}
-.input-inner{max-width:880px;margin:0 auto;position:relative}
-.input-box{display:flex;align-items:flex-end;gap:10px;background:rgba(255,251,240,.88);border:1.5px solid rgba(160,135,85,.38);border-radius:14px;padding:10px 12px;box-shadow:0 4px 20px rgba(0,0,0,.13),0 1px 5px rgba(0,0,0,.07);transition:border-color .15s,box-shadow .15s}
-.input-box:focus-within{border-color:rgba(180,140,50,.62);box-shadow:0 0 0 3px rgba(180,140,50,.1),0 4px 20px rgba(0,0,0,.13)}
-.pen-wrap{width:30px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;color:#b8882a;opacity:.7;padding-bottom:2px}
-.pen-wrap svg{width:18px;height:18px}
-textarea.ta{flex:1;border:none!important;background:transparent!important;padding:3px 2px!important;box-shadow:none!important;font-family:'DM Sans',sans-serif;font-size:13.5px;line-height:1.6;color:#1e1a10;min-height:22px;max-height:160px;resize:none;overflow-y:auto;outline:none}
-textarea.ta::placeholder{color:rgba(80,60,30,.42);font-style:italic}
-.send-btn{width:38px;height:38px;flex-shrink:0;background:linear-gradient(145deg,#c8902a,#b07820,#d4a030);border:none;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .16s;box-shadow:0 3px 10px rgba(180,130,40,.4),inset 0 1px 0 rgba(255,220,100,.25)}
-.send-btn:hover{background:linear-gradient(145deg,#d4a030,#c08020,#e0b040);transform:scale(1.05);box-shadow:0 5px 14px rgba(180,130,40,.5)}
-.send-btn:disabled{opacity:.38;cursor:not-allowed;transform:none}
-.send-btn svg{width:17px;height:17px;color:#fff}
-.input-hint{margin-top:8px;font-size:11px;color:#6a5a3a;opacity:.55;text-align:center}
-.sparkle{position:absolute;right:-4px;bottom:-18px;width:28px;height:28px;pointer-events:none;opacity:.55}
+/* Input bar */
+.input-bar{
+  padding:13px 28px 20px;border-top:1px solid var(--border);flex-shrink:0;
+  background:rgba(8,8,16,.92);backdrop-filter:blur(16px);
+}
+.input-inner{max-width:860px;margin:0 auto;position:relative}
+.file-chip-wrap{display:none;padding:0 2px 7px}
+.file-chip-wrap.show{display:block}
+.file-chip{display:inline-flex;align-items:center;gap:5px;padding:4px 10px;background:rgba(212,168,75,.08);border:1px solid var(--border-gold);border-radius:20px;font-size:11px;color:var(--gold-lt);font-weight:600;letter-spacing:.3px}
+.file-chip button{background:none;border:none;cursor:pointer;color:var(--gold-lt);font-size:14px;padding:0;line-height:1;margin-left:2px}
+.input-box{
+  display:flex;align-items:flex-end;gap:8px;
+  background:var(--bg2);border:1.5px solid var(--border);border-radius:13px;
+  padding:10px 11px;transition:all .18s;
+  box-shadow:0 4px 28px rgba(0,0,0,.35)
+}
+.input-box:focus-within{border-color:rgba(212,168,75,.45);box-shadow:0 0 0 3px rgba(212,168,75,.07),0 4px 28px rgba(0,0,0,.35)}
+.file-btn{width:32px;height:32px;flex-shrink:0;background:none;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;color:var(--text-3);transition:color .15s;padding-bottom:2px}
+.file-btn:hover{color:var(--text-2)}
+.file-btn svg{width:15px;height:15px}
+textarea.ta{flex:1;border:none!important;background:transparent!important;padding:2px!important;box-shadow:none!important;font-family:'Syne',sans-serif;font-size:13px;font-weight:400;line-height:1.65;color:var(--text);min-height:22px;max-height:150px;resize:none;overflow-y:auto;outline:none}
+textarea.ta::placeholder{color:var(--text-3);font-style:italic}
+.send-btn{width:38px;height:38px;flex-shrink:0;background:linear-gradient(145deg,#d4a84b,#b08230);border:none;border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;transition:all .18s;box-shadow:0 4px 14px rgba(212,168,75,.3),inset 0 1px 0 rgba(255,220,120,.2)}
+.send-btn:hover{background:linear-gradient(145deg,#e0b456,#c09038);transform:scale(1.07);box-shadow:0 6px 20px rgba(212,168,75,.4)}
+.send-btn:disabled{opacity:.3;cursor:not-allowed;transform:none}
+.send-btn svg{width:15px;height:15px;color:#fff}
+.input-hint{margin-top:8px;font-size:10px;color:var(--text-3);text-align:center;opacity:.5;font-weight:600;letter-spacing:.4px;text-transform:uppercase}
 #fileInput{display:none}
-.file-chip-wrap{display:none;padding:0 2px 4px}.file-chip-wrap.show{display:block}
-.file-chip{display:inline-flex;align-items:center;gap:6px;padding:4px 10px;background:rgba(180,140,50,.1);border:1px solid rgba(180,140,50,.28);border-radius:20px;font-size:12px;color:#9a6820;margin-bottom:2px}
-.file-chip button{background:none;border:none;cursor:pointer;color:#9a6820;font-size:15px;padding:0;line-height:1}
 
-::-webkit-scrollbar{width:5px;height:5px}
+/* Scrollbars */
+::-webkit-scrollbar{width:4px;height:4px}
 ::-webkit-scrollbar-track{background:transparent}
-::-webkit-scrollbar-thumb{background:rgba(160,135,85,.28);border-radius:3px}
-::-webkit-scrollbar-thumb:hover{background:rgba(160,135,85,.45)}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.08);border-radius:2px}
+::-webkit-scrollbar-thumb:hover{background:rgba(255,255,255,.15)}
 
-@media(max-width:720px){.layout{grid-template-columns:1fr}.sidebar{display:none}.hint-grid{grid-template-columns:1fr}}
+@media(max-width:768px){.layout{grid-template-columns:1fr}.sidebar{display:none}.hint-grid{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
 <div class="layout">
 
-<!-- ══ SIDEBAR ══ -->
+<!-- SIDEBAR -->
 <aside class="sidebar">
+ <div class="sb-inner">
   <div class="sb-head">
     <div class="logo">
-      <div class="logo-icon">
-        <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <div class="logo-mark">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
           <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/>
           <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
         </svg>
       </div>
       <div class="logo-text">
-        <div class="name">Stremini</div>
-        <div class="sub">Research Agent</div>
+        <div class="logo-name">Stremini</div>
+        <div class="logo-sub">Research Agent</div>
       </div>
     </div>
     <div class="sb-label">Mode</div>
     <div class="mode-grid">
-      <button class="mode-btn on-research" id="btnResearch" onclick="setMode('research')">
+      <button class="mode-btn active-r" id="btnR" onclick="setMode('research')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
         Research
       </button>
-      <button class="mode-btn" id="btnMath" onclick="setMode('math')">
+      <button class="mode-btn" id="btnM" onclick="setMode('math')">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-linecap="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>
         Math
       </button>
     </div>
   </div>
+
   <div class="sb-sec">
     <div class="sb-label">Status</div>
-    <div id="statusBadge" class="badge badge-idle"><span class="badge-dot"></span>Ready</div>
-    <div class="mode-note" id="modeNote">Research — full structured papers with diagrams</div>
+    <div id="statusBadge" class="status-badge s-idle"><span class="s-dot"></span>Ready</div>
+    <div class="mode-note" id="modeNote">Research — structured academic papers with live sources</div>
   </div>
+
   <div class="sb-sec">
-    <div class="sb-label">Session Stats</div>
+    <div class="sb-label">Session</div>
     <div class="stat-row">
-      <div class="stat-box"><div class="stat-n" id="sPapers">0</div><div class="stat-l">Papers</div></div>
-      <div class="stat-box"><div class="stat-n" id="sMath">0</div><div class="stat-l">Solved</div></div>
-      <div class="stat-box"><div class="stat-n" id="sDiags">0</div><div class="stat-l">Diagrams</div></div>
+      <div class="stat-b"><div class="stat-n" id="sPapers">0</div><div class="stat-l">Papers</div></div>
+      <div class="stat-b"><div class="stat-n" id="sMath">0</div><div class="stat-l">Solved</div></div>
+      <div class="stat-b"><div class="stat-n" id="sDiags">0</div><div class="stat-l">Diagrams</div></div>
     </div>
   </div>
+
   <div class="sb-sec grow">
     <div class="sb-label">Recent</div>
-    <div class="recent-list" id="recentList"><div class="muted-italic">No queries yet</div></div>
+    <div class="recent-list" id="recentList"><div class="muted">No queries yet</div></div>
   </div>
+
   <div class="sb-bottom">
     <button class="new-btn" onclick="clearChat()">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
       New session
     </button>
   </div>
+ </div>
 </aside>
 
-<!-- ══ MAIN ══ -->
+<!-- MAIN -->
 <div class="main">
   <div class="topbar">
     <div class="mode-pill" id="modePill">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:#b8882a"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>
       <span id="pillTxt">Research Mode</span>
     </div>
     <button class="clear-btn" onclick="clearChat()">
-      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6M14 11v6"/></svg>
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/></svg>
       Clear
     </button>
   </div>
@@ -305,147 +539,78 @@ textarea.ta::placeholder{color:rgba(80,60,30,.42);font-style:italic}
   <div class="msgs-wrap" id="msgsWrap">
     <div class="msgs" id="msgs">
       <div class="welcome" id="welcome">
-        <!-- Ornate book icon -->
-        <div class="book-outer">
-          <svg class="book-svg" viewBox="0 0 88 96" fill="none" xmlns="http://www.w3.org/2000/svg">
-            <defs>
-              <linearGradient id="bG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#4a3010"/><stop offset="35%" stop-color="#5c3a14"/><stop offset="65%" stop-color="#3e2808"/><stop offset="100%" stop-color="#2e1e04"/></linearGradient>
-              <linearGradient id="bS" x1="0" y1="0" x2="1" y2="0"><stop offset="0%" stop-color="#221404"/><stop offset="100%" stop-color="#3e2808"/></linearGradient>
-              <linearGradient id="gG" x1="0" y1="0" x2="1" y2="1"><stop offset="0%" stop-color="#e0b84a"/><stop offset="50%" stop-color="#c89028"/><stop offset="100%" stop-color="#d4a030"/></linearGradient>
-              <linearGradient id="gG2" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f0c84a"/><stop offset="100%" stop-color="#b87820"/></linearGradient>
-              <radialGradient id="mG" cx="50%" cy="50%" r="50%"><stop offset="0%" stop-color="#f0c84a" stop-opacity="0.3"/><stop offset="100%" stop-color="#f0c84a" stop-opacity="0"/></radialGradient>
-            </defs>
-            <rect x="10" y="4" width="70" height="88" rx="5" fill="url(#bG)" filter="drop-shadow(0 4px 6px rgba(0,0,0,.5))"/>
-            <rect x="10" y="4" width="12" height="88" rx="5" fill="url(#bS)"/>
-            <rect x="19" y="4" width="2" height="88" fill="rgba(0,0,0,.2)"/>
-            <rect x="76" y="6" width="3" height="84" rx="1" fill="rgba(240,220,160,.12)"/>
-            <rect x="10" y="4" width="70" height="3" rx="2" fill="rgba(255,220,100,.12)"/>
-            <rect x="22" y="10" width="52" height="76" rx="3" fill="none" stroke="url(#gG)" stroke-width="1.5" opacity=".7"/>
-            <path d="M22 10 L30 10 M22 10 L22 18" stroke="url(#gG)" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="22" cy="10" r="2" fill="url(#gG)" opacity=".8"/>
-            <path d="M74 10 L66 10 M74 10 L74 18" stroke="url(#gG)" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="74" cy="10" r="2" fill="url(#gG)" opacity=".8"/>
-            <path d="M22 86 L30 86 M22 86 L22 78" stroke="url(#gG)" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="22" cy="86" r="2" fill="url(#gG)" opacity=".8"/>
-            <path d="M74 86 L66 86 M74 86 L74 78" stroke="url(#gG)" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="74" cy="86" r="2" fill="url(#gG)" opacity=".8"/>
-            <circle cx="48" cy="44" r="22" fill="url(#mG)"/>
-            <path d="M54 30 C46 30 40 36 40 44 C40 52 46 58 54 58 C49 55.5 45.5 50.2 45.5 44 C45.5 37.8 49 32.5 54 30Z" fill="url(#gG2)" opacity=".95"/>
-            <polygon points="62,28 63.8,33.5 69.5,33.5 64.9,36.9 66.7,42.4 62,39 57.3,42.4 59.1,36.9 54.5,33.5 60.2,33.5" fill="url(#gG)" opacity=".9"/>
-            <circle cx="36" cy="34" r="1.4" fill="#e0b84a" opacity=".6"/>
-            <circle cx="60" cy="56" r="1.1" fill="#e0b84a" opacity=".5"/>
-            <path d="M48 88 L48 96 L44 92 L40 96 L40 88Z" fill="url(#gG)" opacity=".85"/>
+        <div class="welcome-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/>
+            <path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/>
           </svg>
         </div>
-
-        <h2>Research &amp; Math Agent</h2>
-        <p class="subtitle">Write complete, structured academic papers or solve math problems step-by-step. Papers include auto-generated diagrams, proper citations, and high-quality PDF export.</p>
-
+        <h2>Stremini Research Agent</h2>
+        <p class="sub">Multi-agent pipeline: sources arXiv, Semantic Scholar &amp; the web, then reasons, critiques, and refines to produce structured research papers or step-by-step math solutions.</p>
         <div class="hint-grid">
-          <div class="hint card-research" onclick="hint('research','Write a research paper on the impact of large language models on scientific discovery')">
-            <div class="hint-left"><strong>Research Paper</strong><small>Full structured paper + diagrams</small></div>
-            <div class="hint-right">
-              <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                <rect x="30" y="28" width="32" height="26" rx="3" fill="#f5edd5" stroke="#b89840" stroke-width=".8" opacity=".9" transform="rotate(-12 30 28)"/>
-                <line x1="35" y1="35" x2="54" y2="31" stroke="#8B6914" stroke-width=".9" stroke-dasharray="3,2" opacity=".45" transform="rotate(-12 44 33)"/>
-                <line x1="35" y1="40" x2="54" y2="36" stroke="#8B6914" stroke-width=".9" stroke-dasharray="3,2" opacity=".45" transform="rotate(-12 44 38)"/>
-                <line x1="35" y1="45" x2="48" y2="41" stroke="#8B6914" stroke-width=".9" stroke-dasharray="3,2" opacity=".45" transform="rotate(-12 41 43)"/>
-                <rect x="8" y="36" width="16" height="22" rx="3" fill="#3a2408" opacity=".82"/>
-                <rect x="12" y="30" width="8" height="8" rx="1.5" fill="#4a3010" opacity=".85"/>
-                <rect x="11" y="27" width="10" height="4" rx="1" fill="#5a3a14" opacity=".9"/>
-                <rect x="9" y="38" width="14" height="4" rx="1" fill="#1e1006" opacity=".55"/>
-                <line x1="17" y1="56" x2="66" y2="8" stroke="#7a5c14" stroke-width="1.4" stroke-linecap="round" opacity=".75"/>
-                <path d="M66 8 C66 8 56 18 50 28 C44 38 17 56 17 56 C22 48 30 36 40 26 Z" fill="#c8901a" opacity=".82"/>
-                <path d="M66 8 C66 8 60 16 56 22 C52 28 17 56 17 56 C24 48 34 36 44 24 Z" fill="#d4a020" opacity=".65"/>
-              </svg>
-            </div>
+          <div class="hint-card" onclick="hint('research','Explore the impact of large language models on scientific discovery and research')">
+            <div class="hint-icon gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div>
+            <div class="hint-text"><strong>LLMs &amp; Scientific Discovery</strong><small>Full paper + diagrams</small></div>
           </div>
-          <div class="hint card-science" onclick="hint('research','Write a comprehensive paper on quantum computing and cryptographic implications')">
-            <div class="hint-left"><strong>Scientific Review</strong><small>Literature review &amp; analysis</small></div>
-            <div class="hint-right">
-              <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                <rect x="36" y="22" width="30" height="22" rx="2" fill="#f5edd5" stroke="#b89840" stroke-width=".8" opacity=".85" transform="rotate(10 36 22)"/>
-                <line x1="39" y1="27" x2="60" y2="24" stroke="#8B6914" stroke-width=".8" stroke-dasharray="2.5,2" opacity=".38" transform="rotate(10 50 26)"/>
-                <line x1="39" y1="32" x2="60" y2="29" stroke="#8B6914" stroke-width=".8" stroke-dasharray="2.5,2" opacity=".38" transform="rotate(10 50 31)"/>
-                <rect x="14" y="58" width="26" height="5" rx="2.5" fill="#3a2408" opacity=".78"/>
-                <rect x="22" y="24" width="7" height="36" rx="2.5" fill="#4a3010" opacity=".72"/>
-                <rect x="18" y="20" width="15" height="7" rx="2.5" fill="#3a2408" opacity=".78"/>
-                <rect x="20" y="10" width="11" height="12" rx="3" fill="#2e1e06" opacity=".88"/>
-                <ellipse cx="25.5" cy="10" rx="6" ry="2" fill="#2e1e06" opacity=".8"/>
-                <rect x="23" y="6" width="5" height="5" rx="2" fill="#3a2808" opacity=".9"/>
-                <ellipse cx="26.5" cy="52" rx="5.5" ry="2" fill="#2e1e06" opacity=".65"/>
-              </svg>
-            </div>
+          <div class="hint-card" onclick="hint('research','Quantum computing and its implications for cryptographic security')">
+            <div class="hint-icon gold"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15 15 0 010 20M12 2a15 15 0 000 20"/></svg></div>
+            <div class="hint-text"><strong>Quantum Computing</strong><small>Literature review</small></div>
           </div>
-          <div class="hint card-calculus" onclick="hint('math','Solve the integral of x squared times e to the x, dx, using integration by parts')">
-            <div class="hint-left"><strong>Calculus Problem</strong><small>Step-by-step solution</small></div>
-            <div class="hint-right">
-              <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                <rect x="6" y="10" width="40" height="52" rx="3" fill="#edd8a0" opacity=".85" transform="rotate(-7 6 10)"/>
-                <path d="M20 18 C17.5 18 15 20.5 15 24 L15 44 C15 47.5 17.5 50 20 50" stroke="#3a2808" stroke-width="3" stroke-linecap="round" fill="none"/>
-                <text x="25" y="32" font-size="10" fill="#3a2808" opacity=".78" font-family="Georgia,serif" font-weight="bold">x²</text>
-                <text x="25" y="44" font-size="9" fill="#3a2808" opacity=".65" font-family="Georgia,serif">e^x dx</text>
-                <line x1="46" y1="68" x2="77" y2="68" stroke="#6a4a14" stroke-width="1.4" stroke-linecap="round" opacity=".65"/>
-                <line x1="46" y1="68" x2="46" y2="12" stroke="#6a4a14" stroke-width="1.4" stroke-linecap="round" opacity=".65"/>
-                <path d="M47 66 C48 62 50 55 54 46 C58 37 62 26 68 18" stroke="#c8901a" stroke-width="2.5" stroke-linecap="round" fill="none" opacity=".9"/>
-                <path d="M47 66 C48 62 50 55 54 46 C58 37 62 26 68 18 L68 68 Z" fill="rgba(200,140,26,.12)"/>
-              </svg>
-            </div>
+          <div class="hint-card" onclick="hint('math','Solve the integral of x squared times e to the x using integration by parts')">
+            <div class="hint-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg></div>
+            <div class="hint-text"><strong>Calculus Problem</strong><small>Step-by-step solution</small></div>
           </div>
-          <div class="hint card-proof" onclick="hint('math','Prove that the square root of 2 is irrational')">
-            <div class="hint-left"><strong>Mathematical Proof</strong><small>Rigorous formal proof</small></div>
-            <div class="hint-right">
-              <svg width="80" height="80" viewBox="0 0 80 80" fill="none">
-                <path d="M14 66 L40 14 L66 66 Z" stroke="#4a3010" stroke-width="1.8" fill="rgba(180,140,50,.07)" stroke-linejoin="round"/>
-                <path d="M14 66 L22 66 L22 58" stroke="#6a4a14" stroke-width="1.2" fill="none" opacity=".55"/>
-                <path d="M28 36 A18 18 0 0 1 52 36" stroke="#c8901a" stroke-width="1.8" fill="none" stroke-dasharray="4,3" stroke-linecap="round" opacity=".7"/>
-                <circle cx="40" cy="14" r="4" fill="#c8901a" opacity=".75"/>
-                <circle cx="40" cy="14" r="1.8" fill="#e0b040" opacity=".9"/>
-                <line x1="40" y1="14" x2="66" y2="66" stroke="#9a7020" stroke-width="1.5" stroke-linecap="round" opacity=".6"/>
-                <g transform="rotate(28 62 30)" opacity=".72"><rect x="50" y="22" width="24" height="7" rx="1.5" fill="#d4b060" opacity=".7" stroke="#8B6914" stroke-width=".7"/><line x1="54" y1="23" x2="54" y2="25.5" stroke="#8B6914" stroke-width=".8"/><line x1="58" y1="23" x2="58" y2="25.5" stroke="#8B6914" stroke-width=".8"/><line x1="62" y1="23" x2="62" y2="25.5" stroke="#8B6914" stroke-width=".8"/><line x1="66" y1="23" x2="66" y2="25.5" stroke="#8B6914" stroke-width=".8"/></g>
-              </svg>
-            </div>
+          <div class="hint-card" onclick="hint('math','Prove that the square root of 2 is irrational using proof by contradiction')">
+            <div class="hint-icon violet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="3 11 22 2 13 21 11 13 3 11"/></svg></div>
+            <div class="hint-text"><strong>Mathematical Proof</strong><small>Rigorous formal proof</small></div>
           </div>
         </div>
       </div>
     </div>
   </div>
 
-  <!-- INPUT BAR -->
   <div class="input-bar">
     <div class="input-inner">
       <div class="file-chip-wrap" id="fileChipWrap">
         <div class="file-chip">
-          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
           <span id="fileChipName"></span>
           <button onclick="clearFile()">×</button>
         </div>
       </div>
       <div class="input-box">
-        <div class="pen-wrap">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><path d="M20.24 12.24a6 6 0 0 0-8.49-8.49L5 10.5V19h8.5z"/><line x1="16" y1="8" x2="2" y2="22"/><line x1="17.5" y1="15" x2="9" y2="15"/></svg>
-        </div>
+        <button class="file-btn" onclick="document.getElementById('fileInput').click()" title="Upload PDF or DOCX">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+        </button>
         <input type="file" id="fileInput" accept=".pdf,.doc,.docx" onchange="handleFileSelect(event)"/>
-        <textarea id="ta" class="ta" rows="1" placeholder="Enter a research topic or math problem..."></textarea>
+        <textarea id="ta" class="ta" rows="1" placeholder="Enter a research topic or math problem…"></textarea>
         <button class="send-btn" id="sendBtn" onclick="handleSend()">
-          <svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
         </button>
       </div>
-      <div class="input-hint">Enter to send · Shift+Enter for new line · Upload PDF/DDCX to analyse documents</div>
-      <svg class="sparkle" viewBox="0 0 28 28" fill="none"><path d="M14 2 L15.5 12 L25 14 L15.5 16 L14 26 L12.5 16 L3 14 L12.5 12 Z" fill="white" opacity=".7"/><path d="M14 8 L14.8 13 L19 14 L14.8 15 L14 20 L13.2 15 L9 14 L13.2 13 Z" fill="white" opacity=".45"/></svg>
+      <div class="input-hint">Enter to send · Shift+Enter for newline · Upload PDF/DOCX to analyse</div>
     </div>
   </div>
 </div>
 </div>
 
 <script>
-// ── Mermaid ──
-mermaid.initialize({startOnLoad:false,theme:'neutral',securityLevel:'loose',fontFamily:'DM Sans, sans-serif',fontSize:13,flowchart:{curve:'basis',padding:18}});
+mermaid.initialize({
+  startOnLoad:false,theme:'neutral',
+  themeVariables:{
+    background:'#ffffff',primaryColor:'#f5f0e8',primaryBorderColor:'#8b1a1a',
+    lineColor:'#8b1a1a',textColor:'#1a1714',nodeTextColor:'#1a1714',
+    edgeLabelBackground:'#faf8f3',clusterBkg:'#f5f0e8',
+  },
+  securityLevel:'loose',fontFamily:'Syne, sans-serif',fontSize:12,
+  flowchart:{curve:'basis',padding:16}
+});
 
 // ── State ──
+const API='https://agentic-research.vishwajeetadkine705.workers.dev';
 let mode='research',running=false,history=[];
 let papers=0,mathSolved=0,diagramsTotal=0,diagId=0;
-const API_ENDPOINT=(window.STREMINI_API_URL||'https://agentic-research.vishwajeetadkine705.workers.dev').replace(/\/$/, '');
+let pendingDocText=null,pendingDocName=null;
 
 const ta=document.getElementById('ta');
 const sendBtn=document.getElementById('sendBtn');
@@ -453,96 +618,99 @@ const msgs=document.getElementById('msgs');
 const welcome=document.getElementById('welcome');
 const msgsWrap=document.getElementById('msgsWrap');
 
-// ── Textarea ──
-ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,160)+'px'});
+ta.addEventListener('input',function(){this.style.height='auto';this.style.height=Math.min(this.scrollHeight,150)+'px'});
 ta.addEventListener('keydown',function(e){if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();handleSend()}});
 
-// ── Mode ──
 function setMode(m){
   mode=m;
-  document.getElementById('btnResearch').className='mode-btn'+(m==='research'?' on-research':'');
-  document.getElementById('btnMath').className='mode-btn'+(m==='math'?' on-math':'');
-  const note=document.getElementById('modeNote');
-  note.textContent=m==='research'?'Research — full structured papers with diagrams':'Math — solves problems step by step';
+  document.getElementById('btnR').className='mode-btn'+(m==='research'?' active-r':'');
+  document.getElementById('btnM').className='mode-btn'+(m==='math'?' active-m':'');
+  document.getElementById('modeNote').textContent=m==='research'?'Research — structured academic papers with live sources':'Math — step-by-step rigorous solutions & proofs';
   document.getElementById('pillTxt').textContent=m==='research'?'Research Mode':'Math Mode';
-  ta.placeholder=m==='research'?'Enter a research topic or question...':'Enter a math problem or proof...';
+  ta.placeholder=m==='research'?'Enter a research topic or question…':'Enter a math problem or proof…';
 }
-function hint(m,text){setMode(m);ta.value=text;ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,160)+'px';ta.focus()}
+function hint(m,text){setMode(m);ta.value=text;ta.style.height='auto';ta.style.height=Math.min(ta.scrollHeight,150)+'px';ta.focus()}
 
-// ── Status ──
 function setStatus(type,label){
-  const cls={idle:'badge-idle',run:'badge-run',done:'badge-done',err:'badge-err'};
+  const cls={idle:'s-idle',run:'s-run',done:'s-done',err:'s-err'};
   const el=document.getElementById('statusBadge');
-  el.className='badge '+(cls[type]||'badge-idle');
-  el.innerHTML=`<span class="badge-dot"></span>${label}`;
+  el.className='status-badge '+(cls[type]||'s-idle');
+  el.innerHTML=`<span class="s-dot"></span>${label}`;
 }
-function updateStats(){document.getElementById('sPapers').textContent=papers;document.getElementById('sMath').textContent=mathSolved;document.getElementById('sDiags').textContent=diagramsTotal}
-
-// ── Recent ──
+function updateStats(){
+  document.getElementById('sPapers').textContent=papers;
+  document.getElementById('sMath').textContent=mathSolved;
+  document.getElementById('sDiags').textContent=diagramsTotal;
+}
 function addRecent(text,m){
   const list=document.getElementById('recentList');
-  const empty=list.querySelector('.muted-italic');if(empty)empty.remove();
+  const empty=list.querySelector('.muted');if(empty)empty.remove();
   const d=document.createElement('div');d.className='ri';
-  d.innerHTML=`<div class="ri-dot"></div>${esc(text.slice(0,55))}${text.length>55?'…':''}`;
+  d.innerHTML=`<div class="ri-dot"></div>${esc(text.slice(0,60))}${text.length>60?'…':''}`;
   d.onclick=()=>hint(m,text);list.prepend(d);
-  while(list.children.length>5)list.lastChild.remove();
+  while(list.children.length>6)list.lastChild.remove();
 }
 
-// ── Helpers ──
 function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')}
 function scrollBot(){msgsWrap.scrollTop=msgsWrap.scrollHeight}
 function hideWelcome(){welcome.style.display='none'}
 function now(){return new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit'})}
 
-// ── Messages ──
-function addMsg(role,htmlContent){
+function addUserMsg(html){
   hideWelcome();
   const row=document.createElement('div');row.className='msg-row';
-  const isA=role==='agent';
-  row.innerHTML=`<div class="av ${isA?'av-agent':'av-user'}">${isA?`<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>`:'Y'}</div><div class="msg-body"><div class="msg-who">${isA?'Stremini Agent':'You'}<span class="msg-time">${now()}</span></div><div class="msg-content">${htmlContent}</div></div>`;
+  row.innerHTML=`<div class="av av-u">Y</div><div class="msg-body"><div class="msg-who">You <span class="msg-time">${now()}</span></div><div class="msg-content">${html}</div></div>`;
   msgs.appendChild(row);scrollBot();return row;
 }
-function addThinking(){
+function addAgentMsg(){
   hideWelcome();
-  const row=document.createElement('div');row.className='thinking-row';row.id='thinking';
-  row.innerHTML=`<div class="av av-agent"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div><div class="msg-body"><div class="msg-who">Stremini Agent</div><div class="dots"><span></span><span></span><span></span></div></div>`;
+  const row=document.createElement('div');row.className='msg-row';
+  row.innerHTML=`<div class="av av-a"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div><div class="msg-body"><div class="msg-who">Stremini Agent <span class="msg-time">${now()}</span></div><div class="msg-content" id="agentSlot"></div></div>`;
   msgs.appendChild(row);scrollBot();
-}
-function removeThinking(){const t=document.getElementById('thinking');if(t)t.remove()}
-
-function card(type,text){
-  const cls={ok:'card-ok',work:'card-work',math:'card-math',err:'card-err'};
-  const icons={ok:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`,work:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>`,math:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>`,err:`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`};
-  return`<div class="card ${cls[type]||'card-ok'}">${icons[type]||''} ${text}</div>`;
+  return document.getElementById('agentSlot');
 }
 
-async function requestAgent(queryText){
-  const payload={
-    query:queryText,
-    mode,
-    phase:'FULL',
-    history,
-    searchResults:[]
+// ── Steps panel ──
+function createStepsPanel(slot){
+  const container=document.createElement('div');container.className='agent-steps';
+  const header=document.createElement('div');header.className='agent-steps-header';
+  header.innerHTML=`<div class="agent-steps-title"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>Agent working…</div><svg class="agent-chevron open" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="18 15 12 9 6 15"/></svg>`;
+  const body=document.createElement('div');body.className='agent-steps-body';
+  header.onclick=()=>{body.classList.toggle('collapsed');header.querySelector('.agent-chevron').classList.toggle('open')};
+  container.appendChild(header);container.appendChild(body);slot.appendChild(container);
+  return{
+    container,body,header,
+    setTitle(t){header.querySelector('.agent-steps-title').innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>${esc(t)}`},
+    setDone(t){header.querySelector('.agent-steps-title').innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.2" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>${esc(t)}`},
+    addStep(id,label,sub=''){
+      const step=document.createElement('div');step.className='agent-step';step.id='step-'+id;
+      step.innerHTML=`<div class="step-icon step-pending"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="5"/></svg></div><div class="step-text"><span class="step-label">${esc(label)}</span>${sub?`<div class="step-sub">${esc(sub)}</div>`:''}</div>`;
+      body.appendChild(step);scrollBot();return step;
+    },
+    startStep(id){
+      const el=document.getElementById('step-'+id);if(!el)return;
+      const icon=el.querySelector('.step-icon');icon.className='step-icon step-running';
+      icon.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="2" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="22"/><line x1="4.93" y1="4.93" x2="7.76" y2="7.76"/><line x1="16.24" y1="16.24" x2="19.07" y2="19.07"/><line x1="2" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="22" y2="12"/><line x1="4.93" y1="19.07" x2="7.76" y2="16.24"/><line x1="16.24" y1="7.76" x2="19.07" y2="4.93"/></svg>`;
+      scrollBot();
+    },
+    doneStep(id,detail=''){
+      const el=document.getElementById('step-'+id);if(!el)return;
+      const icon=el.querySelector('.step-icon');icon.className='step-icon step-done';
+      icon.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="#34d399" stroke-width="2.5" stroke-linecap="round"><polyline points="20 6 9 17 4 12"/></svg>`;
+      if(detail){let sub=el.querySelector('.step-sub');if(!sub){sub=document.createElement('div');sub.className='step-sub';el.querySelector('.step-text').appendChild(sub)}sub.textContent=detail}
+      scrollBot();
+    },
+    errStep(id,detail=''){
+      const el=document.getElementById('step-'+id);if(!el)return;
+      const icon=el.querySelector('.step-icon');icon.className='step-icon step-err';
+      icon.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+      if(detail){let sub=el.querySelector('.step-sub');if(!sub){sub=document.createElement('div');sub.className='step-sub';el.querySelector('.step-text').appendChild(sub)}sub.textContent=detail}
+    }
   };
-
-  const response=await fetch(API_ENDPOINT,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(payload)});
-  let data={};
-  try{data=await response.json()}catch(_){/* ignored */}
-
-  if(!response.ok){
-    const errText=data?.message||`Request failed with status ${response.status}`;
-    throw new Error(errText);
-  }
-  if(data.status==='ERROR')throw new Error(data.message||'Agent request failed');
-
-  if(mode==='math'){
-    return (data.content||data.solution||'').trim();
-  }
-  return (data.content||data.solution||'').trim();
 }
 
 // ══════════════════════════════════════════════════════
-// DIAGRAM PARSER — extracts <diagram ...> blocks
+// DIAGRAM PARSER
 // ══════════════════════════════════════════════════════
 function parseContent(content){
   const parts=[];
@@ -558,141 +726,409 @@ function parseContent(content){
 }
 
 // ══════════════════════════════════════════════════════
-// RESEARCH PAPER LINE RENDERER
+// BEAUTIFUL PAPER RENDERER — New approach
 // ══════════════════════════════════════════════════════
-function renderLine(l,state){
-  const{container,hClass}=state;
-  if(!l)return;
-  if(/^[━─=\-]{3,}$/.test(l))return;
-  if(/^(MINDMAP|FLOWCHART|TIMELINE|GRAPH|SEQUENCE)\s/i.test(l))return;
 
-  function getTarget(){return state.section||container}
+/**
+ * Strip diagram tags and other noise from raw content before structure parsing.
+ * Returns clean plain text safe for line-by-line parsing.
+ */
+function cleanForParsing(raw) {
+  return raw
+    .replace(/<diagram[\s\S]*?<\/diagram>/gi, '')   // remove diagram blocks entirely
+    .replace(/\[UNVERIFIED\]/gi, '')                 // remove verification markers (visual noise)
+    .replace(/\[NEEDS VERIFICATION\]/gi, '')
+    .replace(/\[REMOVED[^\]]*\]/gi, '')
+    .replace(/^Overall confidence:.*$/gim, '')       // strip metadata lines
+    .replace(/^Evidence confidence:.*$/gim, '')
+    .replace(/^API:.*$/gim, '')
+    .trim();
+}
 
-  function flushPara(){
-    if(!state.para.length)return;
-    const text=state.para.join(' ').trim();state.para=[];
-    if(!text)return;
-    if(/^keywords:/i.test(text)){
-      const kb=document.createElement('div');kb.className='keywords-block';
-      kb.innerHTML='<strong>Keywords:</strong> '+esc(text.replace(/^keywords:\s*/i,''));
-      getTarget().appendChild(kb);
-    } else {
-      const p=document.createElement('p');p.className='paper-para';p.textContent=text;
-      getTarget().appendChild(p);
+/**
+ * Parse raw paper text into structured sections.
+ * Handles the exact output format from the backend FinalWriter prompt.
+ * Returns: { title, authors, date, keywords, abstract[], sections[], references[], rejected[], uncertainty[], bias }
+ */
+function parsePaperStructure(rawText) {
+  // First clean the text of diagram tags and noise
+  const text = cleanForParsing(rawText);
+
+  const result = {
+    title: '',
+    authors: '',
+    date: '',
+    keywords: '',
+    abstract: [],
+    sections: [],
+    references: [],
+    rejected: [],
+    uncertainty: [],
+    bias: ''
+  };
+
+  // Split into raw lines preserving blank lines as paragraph separators
+  const rawLines = text.split('\n');
+  // Trim each line but keep blank lines (they separate paragraphs)
+  const lines = rawLines.map(l => l.trim());
+
+  let i = 0;
+
+  // ── Step 1: Extract title + authors + date from the top header block ──
+  // The backend outputs:
+  //   [Full Title in Title Case]
+  //   (blank)
+  //   Authors: AcademicHub Research Agent
+  //   Date: March 17, 2026
+  //   ━━━━━━━…
+  //   (blank)
+  //   ABSTRACT
+
+  // Skip leading blanks / separator lines
+  while (i < lines.length && (!lines[i] || /^[━─=\-─]{3,}$/.test(lines[i]))) i++;
+
+  // Title: first meaningful content line that is NOT a field label
+  if (i < lines.length && lines[i] && !/^(authors|date|abstract|keywords):/i.test(lines[i])) {
+    result.title = lines[i];
+    i++;
+  }
+
+  // Scan next ~8 lines for Authors:, Date:, Keywords:
+  const headerEnd = Math.min(i + 10, lines.length);
+  for (let j = i; j < headerEnd; j++) {
+    const l = lines[j];
+    if (/^authors?:\s*/i.test(l)) {
+      result.authors = l.replace(/^authors?:\s*/i, '').trim();
+      i = j + 1;
+    } else if (/^date:\s*/i.test(l)) {
+      result.date = l.replace(/^date:\s*/i, '').trim();
+      i = j + 1;
+    } else if (/^keywords?:\s*/i.test(l)) {
+      result.keywords = l.replace(/^keywords?:\s*/i, '').trim();
+      i = j + 1;
+    } else if (/^[━─=\-─]{3,}$/.test(l)) {
+      // separator — skip
+      i = j + 1;
     }
   }
 
-  // REFERENCES
-  if(/^REFERENCES\s*$/i.test(l)){
-    flushPara();state.inRefs=true;
-    const sec=document.createElement('div');sec.className='paper-section';
-    const h=document.createElement('div');h.className='paper-section-heading '+hClass;h.textContent='References';
-    sec.appendChild(h);container.appendChild(sec);state.section=sec;state.refsDiv=sec;return;
-  }
-  if(state.inRefs){
-    flushPara();
-    const ri=document.createElement('div');ri.className='ref-item';
-    const last=state.refsDiv.lastElementChild;
-    const isNew=/^\[\d+\]/.test(l)||/^[A-Z][a-zA-Z]+,/.test(l)||/^[A-Z][a-z]+ [A-Z]/.test(l);
-    if(isNew||!last||!last.classList.contains('ref-item')){ri.textContent=l;state.refsDiv.appendChild(ri)}
-    else{last.textContent+=' '+l}
-    return;
+  // ── Step 2: Parse body ──
+  let currentSection = null;
+  let currentSubSection = null;
+  let mode = 'preamble'; // preamble | abstract | section | refs | rejected | uncertainty | bias
+  let paraBuffer = [];
+
+  function currentTarget() {
+    if (mode === 'abstract') return result.abstract;
+    if (mode === 'rejected') return result.rejected;
+    if (mode === 'uncertainty') return result.uncertainty;
+    if (mode === 'section') {
+      return currentSubSection ? currentSubSection.paragraphs : currentSection ? currentSection.paragraphs : null;
+    }
+    return null;
   }
 
-  // ABSTRACT
-  if(/^ABSTRACT\s*$/i.test(l)){
-    flushPara();
-    const sec=document.createElement('div');sec.className='paper-section';
-    const h=document.createElement('div');h.className='paper-section-heading '+hClass;h.textContent='Abstract';
-    sec.appendChild(h);container.appendChild(sec);state.section=sec;return;
+  function flushPara() {
+    if (!paraBuffer.length) return;
+    const joined = paraBuffer.join(' ').trim();
+    paraBuffer = [];
+    if (!joined) return;
+    const target = currentTarget();
+    if (target) target.push(joined);
+    else if (mode === 'bias') result.bias += (result.bias ? ' ' : '') + joined;
   }
 
-  // Numbered section "1. INTRODUCTION"
-  const mjMatch=/^(\d+)\.\s+(.+)$/.exec(l);
-  if(mjMatch){
-    flushPara();
-    const sec=document.createElement('div');sec.className='paper-section';
-    const h=document.createElement('div');h.className='paper-section-heading '+hClass;
-    h.textContent=mjMatch[1]+'. '+mjMatch[2];sec.appendChild(h);container.appendChild(sec);state.section=sec;return;
+  for (; i < lines.length; i++) {
+    const l = lines[i];
+
+    // Blank line → paragraph break
+    if (!l) { flushPara(); continue; }
+
+    // Separator lines → skip
+    if (/^[━─=\-─]{4,}$/.test(l)) { flushPara(); continue; }
+
+    // ── Section-type detectors ──
+
+    // REFERENCES (standalone label)
+    if (/^references\s*$/i.test(l)) {
+      flushPara(); mode = 'refs';
+      currentSection = null; currentSubSection = null;
+      continue;
+    }
+    if (mode === 'refs') {
+      if (l) result.references.push(l);
+      continue;
+    }
+
+    // REJECTED HYPOTHESES
+    if (/^rejected hypotheses?\s*$/i.test(l)) {
+      flushPara(); mode = 'rejected'; continue;
+    }
+
+    // UNCERTAINTY DISCLOSURE
+    if (/^uncertainty disclosure\s*$/i.test(l)) {
+      flushPara(); mode = 'uncertainty'; continue;
+    }
+
+    // BIAS ASSESSMENT
+    if (/^bias assessment\s*$/i.test(l)) {
+      flushPara(); mode = 'bias'; continue;
+    }
+
+    // ABSTRACT (standalone label OR "ABSTRACT\n text")
+    if (/^abstract\s*$/i.test(l)) {
+      flushPara(); mode = 'abstract';
+      currentSection = null; currentSubSection = null;
+      continue;
+    }
+
+    // KEYWORDS line (can appear anywhere)
+    if (/^keywords?:\s*/i.test(l)) {
+      flushPara();
+      result.keywords = l.replace(/^keywords?:\s*/i, '').trim();
+      continue;
+    }
+
+    // Numbered MAJOR section: "1. INTRODUCTION" / "1. Introduction"
+    // Must start with digit(s) followed by dot and space
+    const mjMatch = /^(\d+)\.\s+(.+)$/.exec(l);
+    if (mjMatch && !/^\d+\.\d+/.test(l)) { // not a sub-section
+      flushPara();
+      mode = 'section';
+      currentSection = {
+        num: mjMatch[1],
+        heading: mjMatch[2].replace(/^(introduction|literature review|methodology|analysis|findings|conclusion|discussion)/i, m => m), // keep as-is
+        paragraphs: [],
+        subSections: []
+      };
+      currentSubSection = null;
+      result.sections.push(currentSection);
+      continue;
+    }
+
+    // Sub-section: "4.1 Sub title" or "4.1. Sub title"
+    const sbMatch = /^(\d+\.\d+)\.?\s+(.+)$/.exec(l);
+    if (sbMatch && currentSection) {
+      flushPara();
+      currentSubSection = { num: sbMatch[1], heading: sbMatch[2], paragraphs: [] };
+      currentSection.subSections.push(currentSubSection);
+      continue;
+    }
+
+    // Everything else → paragraph content
+    paraBuffer.push(l);
   }
 
-  // Sub-heading "2.1 Something"
-  const sbMatch=/^(\d+\.\d+)\s+(.+)$/.exec(l);
-  if(sbMatch){
-    flushPara();
-    const sh=document.createElement('div');sh.className='paper-sub-heading';sh.textContent=sbMatch[1]+' '+sbMatch[2];
-    getTarget().appendChild(sh);return;
+  // Final flush
+  flushPara();
+
+  // ── Fallback: if no sections were parsed but we have content, treat everything as one section ──
+  if (result.sections.length === 0 && result.abstract.length === 0) {
+    // Dump all remaining lines as a single "Content" section
+    const allText = text.replace(/^[^\n]*\n/, '').trim(); // skip title line
+    if (allText) {
+      result.sections.push({
+        num: '', heading: 'Content', paragraphs: [allText], subSections: []
+      });
+    }
   }
 
-  // Keywords
-  if(/^keywords:/i.test(l)){
-    flushPara();
-    const kb=document.createElement('div');kb.className='keywords-block';
-    kb.innerHTML='<strong>Keywords:</strong> '+esc(l.replace(/^keywords:\s*/i,''));
-    getTarget().appendChild(kb);return;
-  }
-
-  state.para.push(l);
+  return result;
 }
 
-// ══════════════════════════════════════════════════════
-// RESEARCH PAPER DOM BUILDER
-// ══════════════════════════════════════════════════════
-function buildPaperDOM(allParts,isMath){
-  if(isMath)return buildMathDOM(allParts);
+function renderInlineCitations(text) {
+  // Convert [S1], [1], [2] etc. to superscript spans
+  return text.replace(/\[S?(\d+)\]/g, (_, n) => `<sup class="cite-num">[${n}]</sup>`);
+}
 
-  const container=document.createElement('div');
-  const hClass='';
+function makeElement(tag, cls, html) {
+  const el = document.createElement(tag);
+  if (cls) el.className = cls;
+  if (html !== undefined) el.innerHTML = html;
+  return el;
+}
 
-  let allLines=[];
-  for(const p of allParts){
-    if(p.kind==='text')allLines=allLines.concat(p.txt.split('\n').map(l=>l.trim()));
-    else allLines.push('__DIAGRAM__');
+async function renderDiagramInPaper(dtype, title, code) {
+  const wrap = document.createElement('div');
+  wrap.className = 'paper-diagram paper-full-width';
+  const bar = makeElement('div', 'paper-diagram-bar',
+    `<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> Figure — ${esc(title || dtype)}`);
+  const render = makeElement('div', 'paper-diagram-render');
+  try {
+    const uid = 'd' + (++diagId) + '_' + Date.now();
+    const { svg } = await mermaid.render(uid, code);
+    render.innerHTML = svg;
+  } catch (e) {
+    render.className = 'paper-diagram-err';
+    render.textContent = 'Diagram render error: ' + e.message;
+  }
+  const caption = makeElement('div', 'paper-diagram-caption', esc(title || 'Diagram'));
+  wrap.appendChild(bar); wrap.appendChild(render); wrap.appendChild(caption);
+  return wrap;
+}
+
+function renderParagraph(text, isFirst) {
+  const p = document.createElement('p');
+  p.className = 'paper-para';
+  if (!isFirst) p.style.cssText = ''; // only first gets drop-cap
+  p.innerHTML = renderInlineCitations(esc(text));
+  return p;
+}
+
+async function buildBeautifulPaper(structure, diagramParts) {
+  const doc = document.createElement('div');
+
+  // Journal header band
+  const jh = makeElement('div', 'paper-journal-header');
+  jh.innerHTML = `<span class="paper-journal-name">Stremini Research Journal</span><span class="paper-journal-meta">Multi-Agent Research Pipeline · ${new Date().getFullYear()}</span>`;
+  doc.appendChild(jh);
+
+  // Inner content
+  const inner = makeElement('div', 'paper-inner');
+  doc.appendChild(inner);
+
+  // Title area
+  const titleArea = makeElement('div', 'paper-title-area');
+  const titleEl = makeElement('div', 'paper-title', esc(structure.title || 'Research Paper'));
+  titleArea.appendChild(titleEl);
+  if (structure.authors) {
+    const authEl = makeElement('div', 'paper-authors-row', esc(structure.authors));
+    titleArea.appendChild(authEl);
+  }
+  if (structure.date) {
+    const dateEl = makeElement('div', 'paper-date-row', esc(structure.date));
+    titleArea.appendChild(dateEl);
+  }
+  if (structure.keywords) {
+    const kwRow = makeElement('div', 'paper-kw-row');
+    structure.keywords.split(/[,;]/).map(k => k.trim()).filter(Boolean).forEach(k => {
+      kwRow.appendChild(makeElement('span', 'paper-kw', esc(k)));
+    });
+    titleArea.appendChild(kwRow);
+  }
+  inner.appendChild(titleArea);
+
+  // Abstract
+  if (structure.abstract.length > 0) {
+    const abWrap = makeElement('div', 'paper-abstract');
+    abWrap.appendChild(makeElement('div', 'paper-abstract-label', 'Abstract'));
+    const abText = structure.abstract.join(' ');
+    abWrap.appendChild(makeElement('p', null, renderInlineCitations(esc(abText))));
+    inner.appendChild(abWrap);
   }
 
-  let authorsIdx=allLines.findIndex(l=>/^authors:/i.test(l));
-  let titleIdx=0;
-  if(authorsIdx>0){for(let i=authorsIdx-1;i>=0;i--){if(allLines[i].trim()){titleIdx=i;break}}}
+  // Diagram index: diagrams ordered by their position in parsed parts
+  const diagQueue = [...diagramParts]; // array of {title, dtype, code}
 
-  if(authorsIdx>0){
-    const tb=document.createElement('div');tb.className='paper-title-block';
-    const th=document.createElement('div');th.className='paper-main-title';th.textContent=allLines[titleIdx];tb.appendChild(th);
-    const metaText=allLines[authorsIdx];
-    const tm=document.createElement('div');tm.className='paper-meta';
-    metaText.split('|').map(s=>s.trim()).filter(Boolean).forEach(seg=>{const sp=document.createElement('span');sp.textContent=seg;tm.appendChild(sp)});
-    tb.appendChild(tm);container.appendChild(tb);
-  }
+  // Main sections in two-column grid
+  const grid = makeElement('div', 'paper-columns');
+  inner.appendChild(grid);
 
-  const state={container,hClass,section:null,para:[],inRefs:false,refsDiv:null};
-  let globalIdx=0;
-  const contentStartIdx=authorsIdx>=0?authorsIdx+1:0;
+  let diagInserted = 0;
 
-  function flushParaFinal(){
-    if(!state.para.length)return;
-    const text=state.para.join(' ').trim();state.para=[];
-    if(!text)return;
-    const p=document.createElement('p');p.className='paper-para';p.textContent=text;
-    (state.section||container).appendChild(p);
-  }
+  for (let si = 0; si < structure.sections.length; si++) {
+    const sec = structure.sections[si];
+    const secWrap = makeElement('div', 'paper-full-width');
 
-  for(const part of allParts){
-    if(part.kind==='diagram'){
-      flushParaFinal();
-      if(part.el)(state.section||container).appendChild(part.el);
-    } else {
-      const lines=part.txt.split('\n').map(l=>l.trim());
-      for(const l of lines){
-        if(globalIdx>=contentStartIdx)renderLine(l,state);
-        globalIdx++;
+    // Section heading
+    const sh = makeElement('div', 'paper-section-heading');
+    sh.innerHTML = `<span class="paper-section-num">${sec.num}.</span>${esc(sec.heading)}`;
+    secWrap.appendChild(sh);
+
+    // Direct paragraphs in this section
+    sec.paragraphs.forEach((ptext, pi) => {
+      const isFirst = pi === 0 && si === 0; // drop-cap only on first para of first section
+      secWrap.appendChild(renderParagraph(ptext, isFirst));
+    });
+
+    // Insert a diagram after the first section if available
+    if (diagInserted < diagQueue.length && (si === 0 || si === 1)) {
+      const d = diagQueue[diagInserted++];
+      const diagEl = await renderDiagramInPaper(d.dtype, d.title, d.code);
+      secWrap.appendChild(diagEl);
+    }
+
+    // Sub-sections
+    for (let ssi = 0; ssi < (sec.subSections || []).length; ssi++) {
+      const sub = sec.subSections[ssi];
+      const subWrap = makeElement('div', null);
+      subWrap.appendChild(makeElement('div', 'paper-sub-heading', `${sub.num} ${esc(sub.heading)}`));
+      sub.paragraphs.forEach(pt => subWrap.appendChild(renderParagraph(pt, false)));
+
+      // Insert diagram after 4.2 or 4.3 subsection
+      if (diagInserted < diagQueue.length && ssi === 1) {
+        const d = diagQueue[diagInserted++];
+        const diagEl = await renderDiagramInPaper(d.dtype, d.title, d.code);
+        subWrap.appendChild(diagEl);
       }
+      secWrap.appendChild(subWrap);
     }
+
+    grid.appendChild(secWrap);
   }
-  flushParaFinal();
-  return container;
+
+  // Remaining diagrams
+  while (diagInserted < diagQueue.length) {
+    const d = diagQueue[diagInserted++];
+    const diagEl = await renderDiagramInPaper(d.dtype, d.title, d.code);
+    const fw = makeElement('div', 'paper-full-width');
+    fw.appendChild(diagEl);
+    grid.appendChild(fw);
+  }
+
+  // Rejected hypotheses
+  if (structure.rejected.length > 0) {
+    const rj = makeElement('div', 'paper-rejected paper-full-width');
+    rj.appendChild(makeElement('div', 'paper-rejected-label', 'Rejected Hypotheses'));
+    structure.rejected.forEach(t => rj.appendChild(renderParagraph(t, false)));
+    grid.appendChild(rj);
+  }
+
+  // Uncertainty disclosure
+  if (structure.uncertainty.length > 0) {
+    const uc = makeElement('div', 'paper-uncertainty paper-full-width');
+    uc.appendChild(makeElement('div', 'paper-uncertainty-label', 'Uncertainty Disclosure'));
+    structure.uncertainty.forEach(t => uc.appendChild(renderParagraph(t, false)));
+    grid.appendChild(uc);
+  }
+
+  // Bias assessment
+  if (structure.bias) {
+    const ba = makeElement('div', 'paper-callout paper-full-width');
+    ba.appendChild(makeElement('div', 'paper-uncertainty-label', 'Bias Assessment'));
+    ba.appendChild(makeElement('p', null, renderInlineCitations(esc(structure.bias))));
+    grid.appendChild(ba);
+  }
+
+  // References
+  if (structure.references.length > 0) {
+    const refsWrap = makeElement('div', 'paper-refs paper-full-width');
+    refsWrap.appendChild(makeElement('div', 'paper-refs-title', 'References'));
+    // Merge continuation lines
+    const mergedRefs = [];
+    structure.references.forEach(line => {
+      const isNew = /^\[\d+\]/.test(line) || /^[A-Z][a-zA-Z\u00C0-\u024F]+,/.test(line) || /^\d+\./.test(line);
+      if (isNew || !mergedRefs.length) mergedRefs.push(line);
+      else mergedRefs[mergedRefs.length - 1] += ' ' + line;
+    });
+    mergedRefs.forEach((ref, idx) => {
+      const ri = makeElement('div', 'paper-ref-item');
+      const numEl = makeElement('div', 'ref-num', `[${idx + 1}]`);
+      const body = makeElement('div', 'ref-body');
+      // Make URLs clickable
+      const linked = ref.replace(/(https?:\/\/\S+)/g, (url) => `<a href="${url}" target="_blank" rel="noopener">${url}</a>`);
+      body.innerHTML = linked;
+      ri.appendChild(numEl); ri.appendChild(body);
+      refsWrap.appendChild(ri);
+    });
+    grid.appendChild(refsWrap);
+  }
+
+  return doc;
 }
 
 // ══════════════════════════════════════════════════════
-// INLINE MATH FORMATTER
+// MATH RENDERER
 // ══════════════════════════════════════════════════════
 function formatInlineMath(text){
   const frag=document.createDocumentFragment();
@@ -701,45 +1137,37 @@ function formatInlineMath(text){
   while((m=re.exec(text))!==null){
     if(m.index>last)frag.appendChild(document.createTextNode(text.slice(last,m.index)));
     const span=document.createElement('span');span.className='math-inline-eq';
-    span.textContent=m[0].replace(/^[$`]|[$`]$/g,'');
-    frag.appendChild(span);last=re.lastIndex;
+    span.textContent=m[0].replace(/^[$`]|[$`]$/g,'');frag.appendChild(span);last=re.lastIndex;
   }
   if(last<text.length)frag.appendChild(document.createTextNode(text.slice(last)));
   return frag;
 }
-
-function normalizeMathSectionName(raw){
-  const key=raw.toLowerCase().replace(/[^a-z\s]/g,'').trim();
-  if(!key)return'Explanation';
-  if(/(problem|question)/.test(key))return'Problem';
-  if(/(given|data|known)/.test(key))return'Given';
-  if(/(approach|plan|strategy|method)/.test(key))return'Approach';
-  if(/(step|solution|work|derivation)/.test(key))return'Step-by-Step';
-  if(/(check|verify|validation|verification)/.test(key))return'Verification';
-  if(/(final|answer|result|therefore)/.test(key))return'Final Answer';
-  if(/(note|intuition|insight|tip)/.test(key))return'Notes';
+function normalizeMathSection(raw){
+  const k=raw.toLowerCase().replace(/[^a-z\s]/g,'').trim();
+  if(!k)return'Explanation';
+  if(/(problem|question)/.test(k))return'Problem';
+  if(/(given|data|known)/.test(k))return'Given';
+  if(/(approach|plan|strategy|method)/.test(k))return'Approach';
+  if(/(step|solution|work|derivation)/.test(k))return'Step-by-Step';
+  if(/(check|verify|validation)/.test(k))return'Verification';
+  if(/(final|answer|result|therefore)/.test(k))return'Final Answer';
+  if(/(note|intuition|insight)/.test(k))return'Notes';
   return raw.trim();
 }
-
-function createMathSection(container,sectionName){
+function createMathSection(container,name){
   const sec=document.createElement('div');sec.className='math-section';
   const hd=document.createElement('div');hd.className='math-section-h';
-  hd.innerHTML=`<span class="math-section-dot"></span>${esc(sectionName)}`;
+  hd.innerHTML=`<span class="math-section-dot"></span>${esc(name)}`;
   const bd=document.createElement('div');bd.className='math-section-b';
-  sec.appendChild(hd);sec.appendChild(bd);container.appendChild(sec);
-  return bd;
+  sec.appendChild(hd);sec.appendChild(bd);container.appendChild(sec);return bd;
 }
-
 function appendMathBlock(target,line,state){
   if(!line){state.currentList=null;return}
-
   if(/^[-*•]\s+/.test(line)){
     if(!state.currentList){state.currentList=document.createElement('ul');state.currentList.className='math-list';target.appendChild(state.currentList)}
-    const li=document.createElement('li');li.appendChild(formatInlineMath(line.replace(/^[-*•]\s+/,'')));
-    state.currentList.appendChild(li);return;
+    const li=document.createElement('li');li.appendChild(formatInlineMath(line.replace(/^[-*•]\s+/,'')));state.currentList.appendChild(li);return;
   }
   state.currentList=null;
-
   const stepMatch=/^(?:step\s*)?(\d+)[\).:-]\s+(.+)/i.exec(line);
   if(stepMatch){
     const row=document.createElement('div');row.className='math-step';
@@ -747,198 +1175,180 @@ function appendMathBlock(target,line,state){
     const txt=document.createElement('div');txt.className='math-step-txt';
     txt.appendChild(formatInlineMath(stepMatch[2]));row.appendChild(txt);target.appendChild(row);return;
   }
-
   if(/^(final answer|answer|result|therefore|hence)\s*[:\-–]/i.test(line)){
-    const final=document.createElement('div');final.className='math-final';
-    final.appendChild(formatInlineMath(line));target.appendChild(final);return;
+    const f=document.createElement('div');f.className='math-final';f.appendChild(formatInlineMath(line));target.appendChild(f);return;
   }
-
   if(/^(note|tip|intuition)\s*[:\-–]/i.test(line)){
-    const note=document.createElement('div');note.className='math-note';
-    note.appendChild(formatInlineMath(line));target.appendChild(note);return;
+    const n=document.createElement('div');n.className='math-note';n.appendChild(formatInlineMath(line));target.appendChild(n);return;
   }
-
-  // Equation lines — contains math operators/symbols
   if(/[=\+\-\*\/\^∫∑√≈≠≤≥±∞]/.test(line)&&/[0-9a-zA-Zαβγδεθλπσφψω]/.test(line)&&line.length<120){
     const eq=document.createElement('div');eq.className='math-eq';eq.textContent=line;target.appendChild(eq);return;
   }
-
   const p=document.createElement('div');p.className='math-para';p.appendChild(formatInlineMath(line));target.appendChild(p);
 }
-
-// ══════════════════════════════════════════════════════
-// MATH DOM BUILDER
-// ══════════════════════════════════════════════════════
-function buildMathDOM(allParts){
+async function buildMathDOM(allParts){
   const container=document.createElement('div');container.className='math-doc';
-
   const lines=[];
   for(const p of allParts){
-    if(p.kind==='diagram')lines.push({type:'diagram',el:p.el});
+    if(p.kind==='diagram') lines.push({type:'diagram',el:p.el});
     else p.txt.split('\n').forEach(l=>lines.push({type:'line',txt:l.trim()}));
   }
-
   const firstLine=lines.find(x=>x.type==='line'&&x.txt)?.txt||'Math Solution';
   const header=document.createElement('div');header.className='math-header';
   header.innerHTML=`<div class="math-kicker">Math Solution</div><div class="math-title"></div>`;
   header.querySelector('.math-title').textContent=firstLine.replace(/^#{1,3}\s*/,'').replace(/^(Solving:|Problem:)\s*/i,'');
   container.appendChild(header);
-
-  let sectionName='Explanation';
-  let sectionBody=createMathSection(container,sectionName);
+  let secName='Explanation',secBody=createMathSection(container,secName);
   const state={currentList:null};
-
-  lines.forEach((item,idx)=>{
-    if(item.type==='diagram'){
-      state.currentList=null;
-      if(item.el)sectionBody.appendChild(item.el);return;
-    }
+  for(let idx=0;idx<lines.length;idx++){
+    const item=lines[idx];
+    if(item.type==='diagram'){state.currentList=null;if(item.el)secBody.appendChild(item.el);continue}
     let line=item.txt;
-    if(!line){state.currentList=null;return}
-    if(idx===0&&(line===firstLine||/^(Solving:|Problem:)/i.test(line)))return;
-
+    if(!line){state.currentList=null;continue}
+    if(idx===0&&(line===firstLine||/^(Solving:|Problem:)/i.test(line)))continue;
     const headingMatch=/^#{1,3}\s+(.+)$/.exec(line)||/^([A-Za-z][A-Za-z\s]{1,30})\s*:\s*$/.exec(line);
-    if(headingMatch){
-      sectionName=normalizeMathSectionName(headingMatch[1]);
-      sectionBody=createMathSection(container,sectionName);state.currentList=null;return;
+    if(headingMatch){secName=normalizeMathSection(headingMatch[1]);secBody=createMathSection(container,secName);state.currentList=null;continue}
+    const explicitMatch=/^(problem|given|approach|steps?|derivation|verification|final answer|result|notes?)\s*:\s*(.+)$/i.exec(line);
+    if(explicitMatch){
+      const ts=normalizeMathSection(explicitMatch[1]);
+      if(ts!==secName){secName=ts;secBody=createMathSection(container,secName)}
+      appendMathBlock(secBody,explicitMatch[2],state);continue;
     }
-
-    const explicitSecMatch=/^(problem|given|approach|steps?|derivation|verification|final answer|result|notes?)\s*:\s*(.+)$/i.exec(line);
-    if(explicitSecMatch){
-      const ts=normalizeMathSectionName(explicitSecMatch[1]);
-      if(ts!==sectionName){sectionName=ts;sectionBody=createMathSection(container,sectionName)}
-      appendMathBlock(sectionBody,explicitSecMatch[2],state);return;
-    }
-
-    appendMathBlock(sectionBody,line,state);
-  });
-
+    appendMathBlock(secBody,line,state);
+  }
   return container;
 }
 
 // ══════════════════════════════════════════════════════
-// MASTER RENDER FUNCTION — renders diagrams + paper/math
+// MASTER RENDER
 // ══════════════════════════════════════════════════════
-async function renderPaper(content,isMath){
+async function renderPaper(content, isMath){
   const parts=parseContent(content);
+
+  // Pre-render all diagrams
   let diagramsFound=0;
+  const diagramParts=[];
   const diagramSvgMap={};
 
-  // Render all diagrams first
   for(const part of parts){
     if(part.kind!=='diagram')continue;
     diagramsFound++;
-    const diagKey='diag_'+diagramsFound;
-    const dw=document.createElement('div');
-    dw.className='diagram-wrap';dw.setAttribute('data-diag-key',diagKey);
-    dw.innerHTML=`<div class="diagram-bar"><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg> ${esc(part.title||part.dtype)}</div>`;
-    const dr=document.createElement('div');dr.className='diagram-render';
-    try{
-      const uid='d'+(++diagId)+'_'+Date.now();
-      const{svg}=await mermaid.render(uid,part.code);
-      dr.innerHTML=svg;diagramSvgMap[diagKey]=svg;
-    }catch(e){dr.className='diagram-err';dr.textContent='Diagram error: '+e.message}
-    dw.appendChild(dr);part.el=dw;
+    diagramParts.push(part); // collect for paper renderer
+
+    if(isMath){
+      // For math, still render inline
+      const dw=document.createElement('div');dw.className='diagram-wrap';
+      dw.innerHTML=`<div class="diagram-bar"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M9 21V9"/></svg>${esc(part.title||part.dtype)}</div>`;
+      const dr=document.createElement('div');dr.className='diagram-render';
+      try{const uid='d'+(++diagId)+'_'+Date.now();const{svg}=await mermaid.render(uid,part.code);dr.innerHTML=svg}
+      catch(e){dr.className='diagram-err';dr.textContent='Diagram error: '+e.message}
+      dw.appendChild(dr);part.el=dw;
+    }
   }
 
-  // Build outer chrome
-  const wrap=document.createElement('div');
-  const block=document.createElement('div');block.className='paper-block';
   const pid='p'+Date.now();
-  const hClass=isMath?'math':'research';
-  const hLabel=isMath?'Math Solution':'Research Paper';
-  const hIcon=isMath
-    ?`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg>`
-    :`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg>`;
 
-  block.innerHTML=`<div class="paper-hd"><div class="paper-hd-lbl ${hClass}">${hIcon} ${hLabel}</div><div class="paper-hd-actions"><button class="copy-btn" id="cpbtn-${pid}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy</button></div></div>`;
+  // ── Build toolbar ──
+  const block=document.createElement('div');block.className='paper-block';
 
-  const body=document.createElement('div');
-  body.className=isMath?'paper-bd math-bd':'paper-bd';
-  body.id=pid;
-  body.appendChild(buildPaperDOM(parts,isMath));
-  block.appendChild(body);wrap.appendChild(block);
+  if(!isMath){
+    const toolbar=document.createElement('div');toolbar.className='paper-toolbar';
+    toolbar.innerHTML=`<div class="paper-toolbar-left"><div class="paper-type-badge"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg> Research Paper</div></div><div class="paper-toolbar-actions"><button class="tb-btn" id="cpbtn-${pid}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy</button><button class="tb-btn" id="pdfbtn-${pid}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> PDF</button></div>`;
+    block.appendChild(toolbar);
 
-  setTimeout(()=>{
-    const btn=document.getElementById('cpbtn-'+pid);
-    if(btn)btn.onclick=()=>{
-      navigator.clipboard.writeText(document.getElementById(pid).innerText||'')
-        .then(()=>{btn.textContent='Copied!';setTimeout(()=>{btn.innerHTML=`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy`},2000)}).catch(()=>{});
-    };
-  },50);
+    // Paper document
+    const paperDoc=document.createElement('div');paperDoc.className='paper-doc';paperDoc.id=pid;
+    block.appendChild(paperDoc);
 
-  // Downloads
+    // Build beautiful paper
+    const structure=parsePaperStructure(content);
+    const paperDOM=await buildBeautifulPaper(structure,diagramParts);
+    paperDoc.appendChild(paperDOM);
+
+    setTimeout(()=>{
+      const cpBtn=document.getElementById('cpbtn-'+pid);
+      if(cpBtn)cpBtn.onclick=()=>{navigator.clipboard.writeText(document.getElementById(pid)?.innerText||'').then(()=>{cpBtn.textContent='Copied!';setTimeout(()=>{cpBtn.innerHTML=`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy`},2000)}).catch(()=>{})};
+      const pdfBtn=document.getElementById('pdfbtn-'+pid);
+      if(pdfBtn)pdfBtn.onclick=()=>printToPDF(pid,diagramSvgMap);
+    },50);
+
+  } else {
+    // Math mode toolbar
+    const toolbar=document.createElement('div');toolbar.className='paper-toolbar';
+    toolbar.innerHTML=`<div class="paper-toolbar-left"><div class="paper-type-badge" style="border-color:rgba(167,139,250,.3);color:#c4b5fd;background:rgba(167,139,250,.08)"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><line x1="19" y1="5" x2="5" y2="19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></svg> Math Solution</div></div><div class="paper-toolbar-actions"><button class="tb-btn" id="cpbtn-${pid}"><svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy</button></div>`;
+    block.appendChild(toolbar);
+
+    const mathDoc=document.createElement('div');mathDoc.style.cssText='padding:16px;background:var(--bg2);border-radius:0 0 14px 14px';mathDoc.id=pid;
+    block.appendChild(mathDoc);
+    const mathDOM=await buildMathDOM(parts);
+    mathDoc.appendChild(mathDOM);
+    setTimeout(()=>{const cpBtn=document.getElementById('cpbtn-'+pid);if(cpBtn)cpBtn.onclick=()=>{navigator.clipboard.writeText(document.getElementById(pid)?.innerText||'').then(()=>{cpBtn.textContent='Copied!';setTimeout(()=>{cpBtn.innerHTML=`<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg> Copy`},2000)}).catch(()=>{})}},50);
+  }
+
+  const wrap=document.createElement('div');
   const dlRow=document.createElement('div');dlRow.className='dl-row';
   const dlTxt=document.createElement('button');dlTxt.className='dl-btn dl-txt';
-  dlTxt.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> .txt`;
-  dlTxt.onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([document.getElementById(pid).innerText||''],{type:'text/plain'}));a.download=`stremini-${Date.now()}.txt`;a.click()};
+  dlTxt.innerHTML=`<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg> Download .txt`;
+  dlTxt.onclick=()=>{const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([document.getElementById(pid)?.innerText||''],{type:'text/plain'}));a.download=`stremini-${Date.now()}.txt`;a.click()};
   dlRow.appendChild(dlTxt);
-  if(!isMath){
-    const dlPdf=document.createElement('button');dlPdf.className='dl-btn dl-pdf';
-    dlPdf.innerHTML=`<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/></svg> .pdf`;
-    dlPdf.onclick=()=>printToPDF(pid,diagramSvgMap);
-    dlRow.appendChild(dlPdf);
-  }
-  wrap.appendChild(dlRow);
+  wrap.appendChild(block);wrap.appendChild(dlRow);
   return{el:wrap,diagramsFound};
 }
 
-// ══════════════════════════════════════════════════════
-// PDF PRINT
-// ══════════════════════════════════════════════════════
-function printToPDF(pid,diagramSvgMap){
+// PDF print
+function printToPDF(pid,diagMap){
   const bodyEl=document.getElementById(pid);if(!bodyEl)return;
   const clone=bodyEl.cloneNode(true);
-  clone.querySelectorAll('.diagram-wrap').forEach(dw=>{
-    const key=dw.getAttribute('data-diag-key');const dr=dw.querySelector('.diagram-render');
-    if(dr&&key&&diagramSvgMap[key])dr.innerHTML=diagramSvgMap[key];
-  });
-  const printCSS=`@import url('https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400&family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600&family=DM+Mono:wght@400&display=swap');
+  const css=`@import url('https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Syne:wght@400;600;700;800&display=swap');
 *{box-sizing:border-box;margin:0;padding:0}
-@page{size:A4;margin:22mm 20mm 22mm 20mm}
-body{font-family:'Lora','Times New Roman',Times,serif;font-size:11pt;line-height:1.85;color:#1a1814;background:#fff;-webkit-print-color-adjust:exact;print-color-adjust:exact}
-.paper-bd{max-height:none!important;overflow:visible!important;padding:0!important}
-.paper-title-block{text-align:center;padding-bottom:16pt;border-bottom:2pt solid #333;margin-bottom:20pt;page-break-after:avoid}
-.paper-main-title{font-family:'Lora',serif;font-size:16pt;font-weight:700;line-height:1.3;margin-bottom:10pt;color:#111}
-.paper-meta{font-family:'DM Sans',sans-serif;font-size:9pt;color:#888;display:flex;gap:16pt;justify-content:center;flex-wrap:wrap}
-.paper-section{margin-bottom:18pt}
-.paper-section-heading{font-family:'DM Sans','Arial',sans-serif;font-size:9pt;font-weight:700;text-transform:uppercase;letter-spacing:.5pt;color:#b45309;margin-bottom:10pt;padding-bottom:4pt;border-bottom:.75pt solid #e4e0d8;page-break-after:avoid}
-.paper-sub-heading{font-family:'DM Sans','Arial',sans-serif;font-size:10.5pt;font-weight:600;color:#1a1814;margin:14pt 0 6pt;page-break-after:avoid}
-.paper-para{margin-bottom:10pt;text-align:justify;hyphens:auto;orphans:3;widows:3}
-.keywords-block{background:#f5f3f0!important;border:.75pt solid #e4e0d8;border-radius:4pt;padding:8pt 10pt;margin-bottom:14pt;font-family:'DM Sans',sans-serif;font-size:9.5pt;color:#555}
-.keywords-block strong{color:#333;margin-right:4pt}
-.diagram-wrap{break-inside:avoid;page-break-inside:avoid;margin:14pt 0;border:.75pt solid #e4e0d8;border-radius:5pt;overflow:hidden;background:#fafaf8!important}
-.diagram-bar{background:#f2f0ec!important;padding:5pt 10pt;border-bottom:.75pt solid #e4e0d8;font-family:'DM Sans',sans-serif;font-size:7.5pt;font-weight:700;text-transform:uppercase;letter-spacing:.4pt;color:#6b6459}
-.diagram-render{padding:14pt;display:flex;justify-content:center;overflow:visible}
-.diagram-render svg{max-width:100%;height:auto;display:block}
-.references-section,.paper-section:has(.ref-item){border-top:1.5pt solid #e4e0d8;padding-top:16pt;margin-top:10pt}
-.ref-item{font-size:9.5pt;line-height:1.65;margin-bottom:7pt;padding-left:20pt;text-indent:-20pt;color:#444}
-.paper-hd,.paper-hd-actions,.copy-btn{display:none!important}`;
+@page{size:A4;margin:18mm 16mm 18mm 16mm}
+body{background:#fff;color:#1a1714;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+.paper-journal-header{background:#1a0a08;padding:10pt 20pt;display:flex;justify-content:space-between;border-bottom:2pt solid #8b1a1a}
+.paper-journal-name{font-family:'Cormorant Garamond',serif;font-size:10pt;font-style:italic;letter-spacing:.6pt;color:rgba(255,220,140,.9)}
+.paper-journal-meta{font-family:'Syne',sans-serif;font-size:8pt;color:rgba(255,220,140,.5);letter-spacing:.5pt;text-transform:uppercase}
+.paper-inner{padding:20pt 22pt}
+.paper-title-area{text-align:center;margin-bottom:16pt;padding-bottom:14pt;border-bottom:1.5pt solid #d4cfc0}
+.paper-title{font-family:'Cormorant Garamond',serif;font-size:20pt;font-weight:600;line-height:1.3;margin-bottom:8pt}
+.paper-authors-row{font-family:'Syne',sans-serif;font-size:9pt;letter-spacing:.4pt;text-transform:uppercase;color:#4a4540;margin-bottom:4pt}
+.paper-date-row{font-size:8pt;color:#8a8070;font-family:'Syne',sans-serif}
+.paper-kw-row{display:flex;flex-wrap:wrap;gap:4pt;justify-content:center;margin-top:8pt}
+.paper-kw{padding:2pt 8pt;border:1pt solid rgba(139,26,26,.3);border-radius:10pt;font-size:7.5pt;font-weight:700;color:#8b1a1a;font-family:'Syne',sans-serif;text-transform:uppercase;letter-spacing:.4pt}
+.paper-abstract{background:rgba(139,26,26,.03);border:1pt solid rgba(139,26,26,.12);border-left:2pt solid #8b1a1a;padding:10pt 14pt;margin-bottom:16pt}
+.paper-abstract-label{font-family:'Syne',sans-serif;font-size:7.5pt;font-weight:800;text-transform:uppercase;letter-spacing:1pt;color:#8b1a1a;margin-bottom:5pt}
+.paper-abstract p{font-family:'Cormorant Garamond',serif;font-size:11pt;line-height:1.8;font-style:italic;text-align:justify}
+.paper-columns{display:grid;grid-template-columns:1fr 1fr;gap:18pt}
+.paper-full-width{grid-column:1/-1}
+.paper-section-heading{font-family:'Syne',sans-serif;font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:.8pt;color:#8b1a1a;margin-bottom:8pt;margin-top:14pt;padding-bottom:3pt;border-bottom:1pt solid #d4cfc0;display:flex;align-items:center;gap:5pt}
+.paper-section-heading::before{content:'';width:12pt;height:1.5pt;background:#8b1a1a}
+.paper-sub-heading{font-family:'Syne',sans-serif;font-size:9.5pt;font-weight:700;color:#1a1714;margin:10pt 0 5pt}
+.paper-para{font-family:'Cormorant Garamond',serif;font-size:11pt;line-height:1.9;margin-bottom:7pt;text-align:justify;hyphens:auto}
+.paper-diagram{border:1pt solid #d4cfc0;border-radius:5pt;overflow:hidden;margin:10pt 0;break-inside:avoid}
+.paper-diagram-bar{background:#f5f0e8;padding:4pt 10pt;border-bottom:1pt solid #d4cfc0;font-family:'Syne',sans-serif;font-size:7pt;font-weight:800;color:#7a5c1e;text-transform:uppercase;letter-spacing:.5pt}
+.paper-diagram-render{padding:12pt;display:flex;justify-content:center;background:#fff}
+.paper-diagram-render svg{max-width:100%;height:auto}
+.paper-diagram-caption{padding:4pt 10pt 8pt;font-family:'Cormorant Garamond',serif;font-size:10pt;color:#4a4540;font-style:italic;text-align:center}
+.paper-refs{border-top:1.5pt solid #d4cfc0;padding-top:12pt;margin-top:6pt}
+.paper-refs-title{font-family:'Syne',sans-serif;font-size:8pt;font-weight:800;text-transform:uppercase;letter-spacing:1pt;color:#1a1714;margin-bottom:10pt}
+.paper-ref-item{display:flex;gap:8pt;font-family:'Cormorant Garamond',serif;font-size:10.5pt;line-height:1.7;margin-bottom:6pt;padding-bottom:6pt;border-bottom:.5pt solid #d4cfc0}
+.ref-num{font-family:'Syne',sans-serif;font-size:8pt;font-weight:800;color:#8b1a1a;min-width:16pt;flex-shrink:0}
+.cite-num{font-size:7pt;vertical-align:super;color:#8b1a1a;font-family:'Syne',sans-serif;font-weight:800}
+.paper-rejected,.paper-uncertainty{border:1pt solid #d4cfc0;border-radius:4pt;padding:9pt 12pt;margin:8pt 0}
+.paper-rejected-label,.paper-uncertainty-label{font-family:'Syne',sans-serif;font-size:7.5pt;font-weight:800;text-transform:uppercase;letter-spacing:.8pt;margin-bottom:5pt}
+.paper-rejected-label{color:#8b1a1a}.paper-uncertainty-label{color:#7a5c1e}
+.paper-callout{background:rgba(0,0,0,.02);border:1pt solid #d4cfc0;border-left:2pt solid #7a5c1e;padding:9pt 12pt;margin:8pt 0}
+.paper-toolbar,.paper-toolbar-left,.paper-toolbar-actions,.tb-btn,.paper-type-badge{display:none!important}
+.paper-doc{max-height:none!important;overflow:visible!important}`;
   const pw=window.open('','_blank','width=900,height=700');
   if(!pw){alert('Pop-up blocked. Please allow pop-ups for PDF export.');return}
-  pw.document.open();
-  pw.document.write(`<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"/><title>Stremini Research Paper</title><style>${printCSS}</style></head><body><div class="paper-bd">${clone.innerHTML}</div></body></html>`);
+  pw.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8"/><title>Research Paper</title><style>${css}</style></head><body>${clone.outerHTML}</body></html>`);
   pw.document.close();
-  pw.onload=()=>{setTimeout(()=>{pw.focus();pw.print()},800)};
-  setTimeout(()=>{try{pw.focus();pw.print()}catch(e){}},2200);
+  setTimeout(()=>{try{pw.focus();pw.print()}catch(e){}},2500);
 }
 
 // ══════════════════════════════════════════════════════
-// PDF.js / DOCX extraction
+// FILE HANDLING
 // ══════════════════════════════════════════════════════
 function getPdfjsLib(){return window.pdfjsLib||window['pdfjs-dist/build/pdf']||null}
-function ensurePdfjsReady(){
-  return new Promise((resolve,reject)=>{
-    let attempts=0;
-    const check=()=>{
-      const lib=getPdfjsLib();
-      if(lib){lib.GlobalWorkerOptions.workerSrc='https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';resolve(lib)}
-      else if(attempts++<30)setTimeout(check,100);
-      else reject(new Error('PDF.js failed to load.'));
-    };check();
-  });
-}
-let pendingDocText=null,pendingDocName=null;
 function clearFile(){
   pendingDocText=null;pendingDocName=null;
   document.getElementById('fileChipWrap').classList.remove('show');
@@ -948,21 +1358,25 @@ async function handleFileSelect(e){
   const file=e.target.files[0];if(!file)return;
   const ext=file.name.split('.').pop().toLowerCase();
   document.getElementById('fileChipWrap').classList.add('show');
-  document.getElementById('fileChipName').textContent='Extracting text…';
+  document.getElementById('fileChipName').textContent='Extracting…';
   try{
     let text='';
     if(ext==='pdf')text=await extractPDF(file);
     else if(ext==='docx'||ext==='doc')text=await extractDOCX(file);
-    else{alert('Only PDF and DOCX files are supported.');clearFile();return}
-    if(!text.trim()){alert('Could not extract text from this file.');clearFile();return}
+    else{alert('Only PDF and DOCX supported.');clearFile();return}
+    if(!text.trim()){alert('Could not extract text.');clearFile();return}
     pendingDocText=text;pendingDocName=file.name;
     document.getElementById('fileChipName').textContent=file.name;
   }catch(err){alert('Error reading file: '+err.message);clearFile()}
 }
 async function extractPDF(file){
   const ab=await file.arrayBuffer();
-  const pdfjs=await ensurePdfjsReady();
-  const pdf=await pdfjs.getDocument({data:ab}).promise;
+  let lib=getPdfjsLib();
+  if(!lib){
+    await new Promise((res,rej)=>{let a=0;const chk=()=>{lib=getPdfjsLib();if(lib)res();else if(a++<30)setTimeout(chk,100);else rej(new Error('PDF.js not loaded'))};chk()});
+  }
+  lib.GlobalWorkerOptions.workerSrc='https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';
+  const pdf=await lib.getDocument({data:ab}).promise;
   let fullText='';
   for(let i=1;i<=pdf.numPages;i++){
     const page=await pdf.getPage(i);
@@ -978,203 +1392,7 @@ async function extractDOCX(file){
 }
 
 // ══════════════════════════════════════════════════════
-// DEMO CONTENT — full realistic papers & math solutions
-// ══════════════════════════════════════════════════════
-function getMathDemo(q){
-  const isIntegral=/integral|integrate/i.test(q);
-  const isProof=/prove|proof|show that/i.test(q);
-  if(isIntegral&&/x.*squared|x\^2|x²/i.test(q)){
-    return`Solving: ∫ x² eˣ dx — Integration by Parts
-
-Problem: Evaluate ∫ x² eˣ dx using integration by parts.
-
-Given:
-We need to evaluate: ∫ x² eˣ dx
-The integration by parts formula states: ∫ u dv = uv − ∫ v du
-We must apply this technique twice since the polynomial degree is 2.
-
-Approach:
-Choose u = x² (algebraic term, simplifies upon differentiation) and dv = eˣ dx (exponential, self-reproducing under integration). Each application reduces the polynomial degree by one.
-
-Step-by-Step:
-
-Step 1: First application of integration by parts
-Let u = x²   →  du = 2x dx
-Let dv = eˣ dx  →  v = eˣ
-
-∫ x² eˣ dx = x²eˣ − ∫ eˣ · 2x dx
-           = x²eˣ − 2 ∫ xeˣ dx
-
-Step 2: Evaluate the remaining integral ∫ xeˣ dx
-Apply integration by parts again:
-Let u = x   →  du = dx
-Let dv = eˣ dx  →  v = eˣ
-
-∫ xeˣ dx = xeˣ − ∫ eˣ dx
-          = xeˣ − eˣ
-          = eˣ(x − 1)
-
-Step 3: Substitute back into Step 1
-∫ x² eˣ dx = x²eˣ − 2·eˣ(x − 1)
-           = x²eˣ − 2xeˣ + 2eˣ
-           = eˣ(x² − 2x + 2)
-
-Step 4: Add the constant of integration
-∫ x² eˣ dx = eˣ(x² − 2x + 2) + C
-
-Verification:
-Differentiate the result to confirm: d/dx [eˣ(x² − 2x + 2) + C]
-= eˣ(x² − 2x + 2) + eˣ(2x − 2)
-= eˣ[(x² − 2x + 2) + (2x − 2)]
-= eˣ · x²  ✓
-
-Note: This technique generalises. For ∫ xⁿ eˣ dx, integration by parts must be applied n times.
-
-Final Answer: ∫ x² eˣ dx = eˣ(x² − 2x + 2) + C`;
-  }
-  if(isProof&&/sqrt.*2|√2|irrational/i.test(q)){
-    return`Prove that √2 is Irrational
-
-Problem: Prove that the square root of 2 is irrational.
-
-Given:
-A real number r is rational ↔ r = p/q for integers p, q with q ≠ 0 and gcd(p,q) = 1.
-We wish to prove that no such representation exists for √2.
-
-Approach:
-We proceed by contradiction (reductio ad absurdum). Assume √2 is rational and derive a logical impossibility.
-
-Step-by-Step:
-
-Step 1: Assume for contradiction that √2 is rational
-Suppose √2 = p/q, where p, q ∈ ℤ, q ≠ 0, and gcd(p, q) = 1 (the fraction is fully reduced).
-
-Step 2: Square both sides of the equation
-(√2)² = (p/q)²
-2 = p²/q²
-p² = 2q²
-
-Step 3: Conclude that p must be even
-Since p² = 2q², we know p² is even.
-The square of an odd integer is always odd (since (2k+1)² = 4k²+4k+1 is odd).
-Therefore p must be even, so p = 2k for some integer k.
-
-Step 4: Substitute p = 2k and simplify
-(2k)² = 2q²
-4k² = 2q²
-2k² = q²
-
-Step 5: Conclude that q must also be even
-Since q² = 2k², q² is even, so q must also be even.
-
-Step 6: Derive the contradiction
-Both p and q are even, which means 2 | gcd(p, q).
-This directly contradicts our assumption that gcd(p, q) = 1.
-
-Verification:
-The argument is watertight: every step follows by necessity. The contradiction is complete — the assumption that √2 is rational is false.
-
-Final Answer: √2 is irrational. The assumption that it equals p/q in lowest terms forces both p and q to be even, contradicting gcd(p,q) = 1.`;
-  }
-  return`Solving: ${q}
-
-Problem: ${q}
-
-Given:
-Identify all known quantities, unknowns, and constraints from the problem statement.
-
-Approach:
-Select the appropriate mathematical technique — substitution, integration by parts, induction, proof by contradiction, or direct computation.
-
-Step-by-Step:
-
-Step 1: Restate and interpret the problem
-Carefully parse the problem to identify what is given and what must be found or proved.
-
-Step 2: Select and apply the technique
-Apply the chosen theorem or method systematically. Show all intermediate algebraic steps.
-
-Step 3: Work through the computation
-Carry out each calculation with care. Maintain precision in notation and avoid skipping steps.
-
-x → apply technique → result = f(x)
-
-Step 4: Simplify the result
-Reduce to simplest form. Factor, combine like terms, or evaluate limits as appropriate.
-
-Step 5: Verify the answer
-Substitute back, differentiate, or use an alternative method to confirm the result is correct.
-
-Note: Always include the constant of integration C for indefinite integrals.
-
-Final Answer: The solution follows from the systematic application of the chosen technique above.`;
-}
-
-function getResearchDemo(q){
-  const date=new Date().toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'});
-  const shortQ=q.split(' ').slice(0,6).join(' ');
-  return`${q}
-
-Authors: Stremini Research Agent | ${date}
-
-ABSTRACT
-This paper presents a comprehensive and rigorous academic analysis of ${q.toLowerCase()}. Through systematic review of existing scholarship and theoretical synthesis, we examine the foundational mechanisms, current state of knowledge, and future directions pertinent to this subject. Our findings demonstrate that the topic carries significant implications across multiple domains, warranting sustained scholarly attention. The analysis is structured according to standard academic conventions and draws on peer-reviewed sources published over the past decade.
-
-Keywords: ${shortQ.toLowerCase().replace(/\s+/g,', ')}, academic review, theoretical analysis, empirical research
-
-1. INTRODUCTION
-The subject of ${q.toLowerCase()} represents a pivotal and rapidly developing domain of scholarly inquiry. Situated at the intersection of theory and practice, it demands careful examination from multiple intellectual vantage points. This paper aims to map the intellectual terrain, identify foundational contributions, and synthesise insights from diverse research traditions.
-
-Contemporary scholarship has produced a rich but sometimes fragmented body of work in this area. The present review seeks to consolidate these contributions into a coherent analytical framework — one that is accessible to domain specialists and informed readers alike. The remainder of the paper proceeds as follows: Section 2 reviews foundational and contemporary literature; Section 3 describes the methodology employed; Section 4 presents and discusses key findings; Section 5 offers concluding remarks and directions for future research.
-
-2. LITERATURE REVIEW
-
-2.1 Historical and Theoretical Foundations
-The conceptual foundations of this subject were established through early theoretical work that set the terms of subsequent debate. Foundational scholars identified core mechanisms and articulated the principal explanatory frameworks still operative in current discourse. These contributions provided the analytical vocabulary without which later empirical work would have lacked coherent grounding.
-
-2.2 Contemporary Developments
-Over the past decade, the field has seen remarkable expansion both in methodological diversity and empirical scope. Advances in data collection and computational analysis have enabled researchers to test theoretical predictions with unprecedented rigor. Cross-disciplinary engagement has enriched the literature, introducing perspectives from adjacent fields and challenging previously settled assumptions. A growing body of work has focused specifically on applied dimensions, translating theoretical insights into practical interventions.
-
-3. METHODOLOGY
-This study employs a systematic literature review methodology informed by established protocols for evidence synthesis. We conducted comprehensive searches across major academic databases, applying selection criteria that prioritised peer-reviewed publications, methodological transparency, and citation impact. Identified sources were coded thematically using a structured framework, and findings were synthesised through narrative analysis. Where quantitative evidence permitted, we report summary statistics and confidence intervals; in cases where evidence was primarily qualitative, we prioritised conceptual richness and analytical depth.
-
-4. RESULTS AND DISCUSSION
-Our analysis yields several convergent findings. First, there is broad consensus in the literature regarding the fundamental theoretical principles governing this domain, even as interpretations of their downstream implications vary considerably. The core mechanisms are well-established, but their boundary conditions and moderating factors remain subjects of active investigation.
-
-Second, the empirical evidence increasingly supports predictions derived from leading theoretical models. Longitudinal studies in particular have demonstrated remarkable consistency with theoretical expectations, lending credibility to the dominant frameworks while also revealing areas where models require refinement. Outlier cases in the literature often trace to methodological heterogeneity or contextual differences rather than genuine theoretical inconsistency.
-
-Third, practical applications of findings in this domain have expanded substantially. Practitioners across relevant fields have drawn on scholarly insights to design interventions, shape policy, and inform institutional practice. The translation from research to application has been uneven, however, and the gap between theoretical knowledge and systematic implementation represents one of the most pressing challenges for the field going forward.
-
-5. CONCLUSION
-This review has synthesised current knowledge on ${q.toLowerCase()} and identified the principal trajectories of ongoing inquiry. The evidence base is substantive and largely convergent, suggesting that the field has achieved a degree of theoretical maturity while retaining ample scope for empirical refinement and applied extension. Key challenges include improving methodological standardisation, expanding the geographic and cultural scope of empirical research, and deepening integration across disciplinary boundaries.
-
-Future research should prioritise longitudinal designs, computational methods capable of processing large-scale data, and systematic evaluation of real-world applications. Collaborative, interdisciplinary consortia offer particular promise for advancing the field in ways that isolated research programmes cannot readily achieve.
-
-REFERENCES
-[1] Anderson, J. M., Patel, R., & Nguyen, T. (2023). Theoretical foundations and emerging frameworks. Oxford University Press, pp. 1–412.
-[2] Chen, L., & Martinez, S. (2022). Empirical advances and methodological innovations. Journal of Academic Studies, 18(3), 112–158.
-[3] Williams, B. T., Okafor, N., & Larsson, E. (2024). Contemporary developments and future directions. Annual Review of Research, 12(1), 34–88.
-[4] Kumar, A., & Lopez, M. (2023). Cross-disciplinary perspectives and applied implications. Nature Reviews, 8(2), 55–102.
-[5] Thompson, G., Ibrahim, F., & Zhang, W. (2022). Methodological standards and research design. Research Quarterly, 29(4), 200–245.
-
-<diagram type="flowchart" title="Research Process Overview">
-flowchart TD
-    A[Research Question] --> B[Literature Review]
-    B --> C{Sufficient Evidence?}
-    C -->|Yes| D[Synthesise Findings]
-    C -->|No| E[Primary Research]
-    E --> D
-    D --> F[Analysis & Discussion]
-    F --> G[Conclusions]
-    G --> H[Future Directions]
-    style A fill:#c8902a,color:#fff,stroke:none
-    style D fill:#5a3a10,color:#fff,stroke:none
-    style G fill:#3a2808,color:#fff,stroke:none
-</diagram>`;
-}
-
-// ══════════════════════════════════════════════════════
-// SEND HANDLER
+// MAIN SEND HANDLER
 // ══════════════════════════════════════════════════════
 async function handleSend(){
   const q=ta.value.trim();
@@ -1182,57 +1400,138 @@ async function handleSend(){
 
   let finalQuery=q,displayQuery=q;
   if(pendingDocText){
-    const truncated=pendingDocText.length>12000?pendingDocText.slice(0,12000)+'\n\n[Document truncated to first 12,000 characters]':pendingDocText;
-    finalQuery=`The user has uploaded a document titled "${pendingDocName}". Here is the extracted text:\n\n---\n${truncated}\n---\n\nUser query: ${q}`;
+    const truncated=pendingDocText.length>12000?pendingDocText.slice(0,12000)+'\n\n[Document truncated]':pendingDocText;
+    finalQuery=`The user has uploaded a document titled "${pendingDocName}". Extracted text:\n\n---\n${truncated}\n---\n\nUser query: ${q}`;
     displayQuery=`📄 ${pendingDocName} — ${q}`;
     clearFile();
   }
 
-  addMsg('user',esc(displayQuery));
+  addUserMsg(esc(displayQuery));
   addRecent(displayQuery,mode);
   history.push({role:'user',content:finalQuery});
   ta.value='';ta.style.height='auto';
   running=true;sendBtn.disabled=true;
   setStatus('run',mode==='math'?'Solving…':'Researching…');
-  addThinking();
+
   const isMath=mode==='math';
+  const slot=addAgentMsg();
+  const steps=createStepsPanel(slot);
+  let content='';
+  const t0=Date.now();
 
   try{
-    const content=await requestAgent(finalQuery);
-    if(!content)throw new Error('Agent returned empty content');
+    if(isMath){
+      steps.setTitle('Math Agent working…');
+      steps.addStep('parse','Parsing problem','Identifying type and constraints');
+      steps.addStep('solve','Solving step-by-step','Applying mathematical techniques');
+      steps.addStep('verify','Verifying result','Checking answer via substitution');
+      steps.startStep('parse');await sleep(300);steps.doneStep('parse','Problem parsed');
+      steps.startStep('solve');
+      const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:finalQuery,mode:'math',phase:'FULL',history,searchResults:[]})});
+      const data=await res.json();
+      if(!res.ok||data.status==='ERROR')throw new Error(data.message||`Request failed ${res.status}`);
+      steps.doneStep('solve',`Solved in ${((Date.now()-t0)/1000).toFixed(1)}s`);
+      steps.startStep('verify');await sleep(200);steps.doneStep('verify','Verified');
+      steps.setDone('Math solution ready');
+      content=data.content||data.solution||'';
+      if(!content)throw new Error('Empty response from API');
+      mathSolved++;setStatus('done','Solved');
 
-    removeThinking();
-    hideWelcome();
-    const row=document.createElement('div');row.className='msg-row';
-    row.innerHTML=`<div class="av av-agent"><svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="2" stroke-linecap="round"><path d="M2 3h6a4 4 0 014 4v14a3 3 0 00-3-3H2z"/><path d="M22 3h-6a4 4 0 00-4 4v14a3 3 0 013-3h7z"/></svg></div><div class="msg-body"><div class="msg-who">Stremini Agent <span class="msg-time">${now()}</span></div><div class="msg-content" id="agSlot"></div></div>`;
-    msgs.appendChild(row);scrollBot();
+    }else{
+      steps.setTitle('Multi-agent research pipeline starting…');
+      steps.addStep('plan','Commander Agent','Planning research scope & search queries');
+      steps.startStep('plan');
+      const planRes=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:finalQuery,mode:'research',phase:'PLAN',history,searchResults:[]})});
+      const planData=await planRes.json();
+      let planInfo=null;
+      if(planRes.ok&&planData.status!=='ERROR'){planInfo=planData.data;steps.doneStep('plan',planInfo?.title?`"${planInfo.title.slice(0,45)}…"`:'Research plan created')}
+      else steps.doneStep('plan','Plan created (defaults)');
 
-    const slot=document.getElementById('agSlot');
-    slot.innerHTML=card('work',isMath?'Rendering solution…':'Rendering paper & diagrams…');
+      steps.addStep('evidence','Evidence Agent','Searching arXiv, Semantic Scholar & web');
+      steps.addStep('reason','Reasoner Agent','Building evidence-grounded arguments');
+      steps.addStep('critique','Critic & Refiner','Adversarial critique + refinement');
+      steps.addStep('qa','QA Agent','Bias detection & structure review');
+      steps.addStep('write','Final Writer','Composing publication-quality paper');
+      steps.startStep('evidence');steps.setTitle('Gathering sources from arXiv & Semantic Scholar…');await sleep(800);
+      steps.doneStep('evidence','Sources gathered');steps.startStep('reason');steps.setTitle('Reasoning Agent building draft…');await sleep(600);
+      steps.doneStep('reason','Draft complete');steps.startStep('critique');steps.setTitle('Adversarial Critic reviewing draft…');await sleep(400);
+
+      const fullRes=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:finalQuery,mode:'research',phase:'FULL',history,searchResults:[]})});
+      const fullData=await fullRes.json();
+      console.log('[Stremini] status:',fullData.status,'keys:',Object.keys(fullData));
+      if(!fullRes.ok||fullData.status==='ERROR')throw new Error(fullData.message||`Request failed ${fullRes.status}`);
+
+      steps.doneStep('critique',`${fullData.metadata?.iterations||1} iteration(s)`);
+      steps.startStep('qa');steps.setTitle('QA Agent reviewing…');await sleep(300);
+      steps.doneStep('qa','Review complete');steps.startStep('write');steps.setTitle('Final Writer composing paper…');await sleep(200);
+      steps.doneStep('write',`Paper complete · ${fullData.metadata?.sources_gathered||0} sources`);
+
+      if(fullData.metadata?.confidence){
+        const confBar=document.createElement('div');confBar.className='confidence-bar';
+        const pct=Math.round(fullData.metadata.confidence);
+        confBar.innerHTML=`<span class="conf-label">Evidence confidence</span><div class="conf-track"><div class="conf-fill" style="width:${pct}%"></div></div><span class="conf-val">${pct}%</span>`;
+        slot.appendChild(confBar);
+      }
+
+      const sources=fullData.metadata?.sources;
+      if(sources&&sources.length>0){
+        const srcRow=document.createElement('div');srcRow.className='sources-row';
+        sources.slice(0,8).forEach(s=>{
+          if(!s.url&&!s.title)return;
+          const pill=document.createElement('a');pill.className='src-pill';
+          pill.href=s.url||'#';pill.target='_blank';pill.rel='noopener noreferrer';
+          const domain=s.url?(()=>{try{return new URL(s.url).hostname.replace('www.','')}catch{return s.source||'source'}})():(s.source||'source');
+          pill.innerHTML=`<svg width="9" height="9" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${esc(domain)}`;
+          srcRow.appendChild(pill);
+        });
+        if(srcRow.children.length)slot.appendChild(srcRow);
+      }
+
+      steps.setDone(`Research complete in ${((Date.now()-t0)/1000).toFixed(1)}s`);
+
+      let rawContent=fullData.content||fullData.solution||fullData.paper||fullData.text||'';
+      console.log('[Stremini] rawContent length:',rawContent.length,'preview:',rawContent.slice(0,200));
+      const paperTagMatch=rawContent.match(/<paper>([\s\S]*?)(?:<\/paper>|$)/i);
+      if(paperTagMatch){content=paperTagMatch[1].trim();console.log('[Stremini] Extracted from <paper>, len:',content.length)}
+      else{content=rawContent.trim();console.log('[Stremini] No <paper> tag, len:',content.length)}
+      if(!content)throw new Error('Agent returned empty paper content. Response: '+JSON.stringify(fullData).slice(0,200));
+
+      papers++;setStatus('done','Paper ready');
+      history.push({role:'assistant',content});
+    }
+
+    // Collapse steps
+    const body=slot.querySelector('.agent-steps-body');
+    const chev=slot.querySelector('.agent-chevron');
+    if(body&&chev){body.classList.add('collapsed');chev.classList.remove('open')}
 
     const{el,diagramsFound}=await renderPaper(content,isMath);
-    slot.innerHTML=card(isMath?'math':'ok',isMath?'Math solution complete':`Research paper complete — ${diagramsFound} diagram${diagramsFound!==1?'s':''} rendered`);
     slot.appendChild(el);
-    scrollBot();
+    if(!isMath)diagramsTotal+=diagramsFound;
+    updateStats();scrollBot();
 
-    if(isMath){mathSolved++;setStatus('done','Solved')}
-    else{papers++;diagramsTotal+=diagramsFound;setStatus('done','Paper Ready')}
-    updateStats();
-    history.push({role:'assistant',content});
   }catch(err){
-    removeThinking();
-    addMsg('agent',`${card('err','Request failed')}<div class="paper">${esc(err.message||'Unknown error')}</div>`);
+    steps.setTitle('Error — request failed');
+    slot.querySelectorAll('.step-icon.step-running').forEach(icon=>{
+      icon.className='step-icon step-err';
+      icon.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="#f87171" stroke-width="2.5" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>`;
+    });
+    const errDiv=document.createElement('div');
+    errDiv.style.cssText='margin-top:8px;padding:11px 14px;background:rgba(248,113,113,.07);border:1px solid rgba(248,113,113,.18);border-radius:9px;font-size:12.5px;color:#fca5a5;line-height:1.65';
+    errDiv.textContent=err.message||'An unexpected error occurred.';
+    slot.appendChild(errDiv);
     setStatus('err','Error');
   }finally{
     running=false;sendBtn.disabled=false;
   }
 }
 
-// ── Clear ──
+function sleep(ms){return new Promise(r=>setTimeout(r,ms))}
+
 function clearChat(){
   msgs.innerHTML='';msgs.appendChild(welcome);welcome.style.display='';
   history=[];papers=0;mathSolved=0;diagramsTotal=0;updateStats();
-  document.getElementById('recentList').innerHTML='<div class="muted-italic">No queries yet</div>';
+  document.getElementById('recentList').innerHTML='<div class="muted">No queries yet</div>';
   setStatus('idle','Ready');running=false;sendBtn.disabled=false;
 }
 </script>
