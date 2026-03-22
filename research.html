@@ -1448,6 +1448,70 @@ async function handleFileSelect(e){
 async function extractPDF(file){const ab=await file.arrayBuffer();let lib=getPdfLib();if(!lib){await new Promise((res,rej)=>{let a=0;const chk=()=>{lib=getPdfLib();if(lib)res();else if(a++<30)setTimeout(chk,100);else rej(new Error('PDF.js not loaded'))};chk()})}lib.GlobalWorkerOptions.workerSrc='https://unpkg.com/pdfjs-dist@3.11.174/build/pdf.worker.min.js';const pdf=await lib.getDocument({data:ab}).promise;let txt='';for(let i=1;i<=pdf.numPages;i++){const page=await pdf.getPage(i);const content=await page.getTextContent();txt+=content.items.map(item=>item.str).join(' ')+'\n'}return txt.trim()}
 async function extractDOCX(file){const ab=await file.arrayBuffer();const result=await mammoth.extractRawText({arrayBuffer:ab});return result.value.trim()}
 
+// ══ MANUSCRIPT → CODE FOLLOW-UP ══
+async function runCodeFromManuscriptFollowup(context){
+  const slot=addAgentMsg();
+  const steps=createStepsPanel(slot);
+  const TOTAL=4;
+  const prog=createProgressBar(slot,TOTAL,'code');
+  const t0=Date.now();
+  setStatus('run','Generating integrated production code…');
+
+  try{
+    steps.setTitle('Generating production code from manuscript context…');
+    steps.addStep('arch','Code Architect','Designing implementation architecture from manuscript findings');
+    steps.addStep('fw','Code File Writer','Generating runnable multi-file codebase');
+    steps.addStep('doc','Documentation Writer','Writing README and setup guide');
+    steps.addStep('done','Assembler','Finalizing project package');
+
+    steps.startStep('arch');prog.update(1,'Designing architecture from manuscript…');await sleep(300);
+    const codeOptions={language:'auto',framework:'auto',include_research_paper:false};
+    const codeQuery=context?.suggested_code_query||`Build a full production-ready software implementation for this research: ${context?.title||'Research Manuscript'}.`;
+    const codeHistory=[{role:'user',content:context?.query||codeQuery},{role:'assistant',content:'[Full manuscript generated and approved for implementation]'}];
+
+    const res=await fetch(API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({query:codeQuery,mode:'code',phase:'CODE',history:codeHistory,searchResults:[],code_options:codeOptions})});
+    const data=await res.json();
+    if(!res.ok||data.status==='ERROR')throw new Error(data.message||`Request failed ${res.status}`);
+
+    steps.doneStep('arch','Architecture complete');
+    steps.startStep('fw');prog.update(2,'Generating source files…');await sleep(200);
+    const totalFiles=Object.keys(data.files||{}).length;
+    steps.doneStep('fw',`${totalFiles} files generated`);
+    steps.startStep('doc');prog.update(3,'Writing docs & setup instructions…');await sleep(150);
+    steps.doneStep('doc','README generated');
+    steps.startStep('done');prog.update(4,'Packaging final output…');await sleep(150);
+    steps.doneStep('done',`Ready · ${((Date.now()-t0)/1000).toFixed(1)}s`);
+    prog.done(`Integrated code generation complete · ${((Date.now()-t0)/1000).toFixed(1)}s`);
+    steps.setDone(`Production code ready in ${((Date.now()-t0)/1000).toFixed(1)}s`);
+
+    const{el}=await renderOutput(data.content||'',false,false,false,true,data);
+    slot.appendChild(el);
+    codeProjects++;
+    history.push({role:'assistant',content:`[Integrated code generated: ${totalFiles} files]`});
+    updateStats();
+    setStatus('done','Integrated code ready');
+    scrollBot();
+  }catch(err){
+    steps.setTitle('Integrated code generation failed');
+    const errDiv=document.createElement('div');errDiv.style.cssText='margin-top:8px;padding:12px 15px;background:rgba(220,50,50,.05);border:1px solid rgba(220,50,50,.15);border-radius:9px;font-size:13px;color:#991b1b;line-height:1.65';errDiv.textContent=err.message||'Could not generate code from manuscript.';
+    slot.appendChild(errDiv);
+    setStatus('err','Code follow-up failed');
+  }
+}
+
+function addManuscriptCodePrompt(slot,context){
+  const box=document.createElement('div');
+  box.style.cssText='margin-top:12px;padding:14px;border:1px solid rgba(26,122,58,.25);border-radius:10px;background:rgba(26,122,58,.04)';
+  box.innerHTML=`<div style="font-size:12px;font-weight:700;color:var(--code-green);margin-bottom:5px">Generate code for this manuscript?</div><div style="font-size:12px;color:var(--ink2);line-height:1.6">Your manuscript is complete. I can now generate a full production-ready project directly from it (architecture, source files, tests, Docker, and docs).</div>`;
+  const actions=document.createElement('div');actions.style.cssText='display:flex;gap:8px;margin-top:10px;flex-wrap:wrap';
+  const yes=document.createElement('button');yes.className='tb-action';yes.style.cssText='border-color:rgba(26,122,58,.3);color:var(--code-green)';yes.textContent='Generate Production Code';
+  const no=document.createElement('button');no.className='tb-action';no.textContent='Skip for now';
+  yes.onclick=async()=>{yes.disabled=true;no.disabled=true;yes.textContent='Starting…';await runCodeFromManuscriptFollowup(context);box.remove();};
+  no.onclick=()=>box.remove();
+  actions.appendChild(yes);actions.appendChild(no);box.appendChild(actions);
+  slot.appendChild(box);scrollBot();
+}
+
 // ══ MAIN SEND ══
 async function handleSend(){
   const q=ta.value.trim();if(!q||running)return;
@@ -1458,7 +1522,7 @@ async function handleSend(){
   ta.value='';ta.style.height='auto';running=true;sendBtn.disabled=true;
   setStatus('run',isCode?'Generating code…':isDiscovery?'Discovering…':isManuscript?'Generating manuscript…':isMath?'Solving…':'Researching…');
   const slot=addAgentMsg();const steps=createStepsPanel(slot);
-  let content='',fullData=null;const t0=Date.now();
+  let content='',fullData=null,manuscriptFollowup=null;const t0=Date.now();
 
   try{
     if(isCode){
@@ -1556,6 +1620,7 @@ async function handleSend(){
       prog.done(`Full manuscript ready · ${((Date.now()-t0)/1000).toFixed(1)}s`);steps.setDone(`Manuscript complete in ${((Date.now()-t0)/1000).toFixed(1)}s`);
       const evalPanel=buildEvalDashboard(data.metadata);if(evalPanel)slot.appendChild(evalPanel);const prPanel=buildPeerReviewPanel(data.peer_review);if(prPanel)slot.appendChild(prPanel);
       const sources=data.metadata?.sources;if(sources&&sources.length>0){const srcRow=document.createElement('div');srcRow.className='sources-row';sources.slice(0,10).forEach(s=>{if(!s.url&&!s.title)return;const pill=document.createElement('a');pill.className='src-pill';pill.href=s.url||'#';pill.target='_blank';pill.rel='noopener';const domain=s.url?(()=>{try{return new URL(s.url).hostname.replace('www.','')}catch{return s.source||'source'}})():(s.source||'source');pill.innerHTML=`<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 01-2 2H5a2 2 0 01-2-2V8a2 2 0 012-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>${esc(domain)}`;srcRow.appendChild(pill)});if(srcRow.children.length)slot.appendChild(srcRow)}
+      manuscriptFollowup={query:finalQuery,title:data.title,...(data.follow_up||{})};
       content=data.content||'';manuscripts++;setStatus('done','Manuscript ready');history.push({role:'assistant',content:'[Full manuscript generated]'});
 
     }else{
@@ -1579,6 +1644,7 @@ async function handleSend(){
     const body2=slot.querySelector('.steps-body');const chev=slot.querySelector('.steps-chevron');if(body2&&chev){body2.classList.add('collapsed');chev.classList.remove('open')}
     const{el}=await renderOutput(content,isMath,isManuscript,isDiscovery,isCode,fullData);
     slot.appendChild(el);updateStats();scrollBot();
+    if(isManuscript&&manuscriptFollowup?.type==='offer_code_generation')addManuscriptCodePrompt(slot,manuscriptFollowup);
 
   }catch(err){
     steps.setTitle('Pipeline encountered an error');

@@ -1106,6 +1106,16 @@ ${referenceList}
     content: finalManuscript,
     sections: writtenSections,
     peer_review: peerReviewReport,
+    follow_up: {
+      type: "offer_code_generation",
+      question: "Would you like production-ready code generated from this manuscript?",
+      suggested_code_query: `Build a full production-ready software project that implements and operationalizes this research manuscript topic: ${refinedPlan.title || query}.`,
+      recommended_options: {
+        include_research_paper: false,
+        language: "auto",
+        framework: "auto",
+      },
+    },
     metadata: {
       pipeline_version: "7.0",
       pipeline_type: "full-manuscript",
